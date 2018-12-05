@@ -50,7 +50,7 @@ class SignatureModuleTest extends TestHelper
 
         $signer->sign($module);
 
-        copy($writer->getPath(), 'signed.pdf');
+//        copy($writer->getPath(), 'signed.pdf');
 
         $this->assertTrue(
             $this->validate($writer->getPath(), $field->getQualifiedName(), $identity->getSigningCertificate())
@@ -83,7 +83,7 @@ class SignatureModuleTest extends TestHelper
 
         $signer->sign($module);
 
-        copy($writer->getPath(), 'signed-and-timestamped.pdf');
+//        copy($writer->getPath(), 'signed-and-timestamped.pdf');
 
         $this->assertTrue(
             $this->validate($writer->getPath(), $field->getQualifiedName(), $identity->getSigningCertificate())
