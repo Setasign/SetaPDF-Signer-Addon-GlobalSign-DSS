@@ -11,20 +11,21 @@ class TestHelper extends TestCase
     protected function getClientInstance(array $options = null, $apiKey = null, $apiSecret = null)
     {
         $privateFolder = __DIR__ . '/../../private';
-        $credentials = $privateFolder . '/credentials.php';
-        if (!file_exists($credentials)) {
+        $credentialsFile = $privateFolder . '/credentials.php';
+        if (!file_exists($credentialsFile)) {
             $this->markTestSkipped('No credentials known.');
             return;
         }
 
-        // load the credentials
+        $credentials = require($credentialsFile);
         if (!isset($apiKey, $apiSecret)) {
-            ['apiKey' => $apiKey, 'apiSecret' => $apiSecret] = require($credentials);
+            $apiKey = $credentials['apiKey'];
+            $apiSecret = $credentials['apiSecret'];
         }
 
         $options = $options ?? [
-            'cert' => \realpath($privateFolder . '/tls-cert.pem'),
-            'ssl_key' => \realpath($privateFolder . '/globalsign-private.pem')
+            'cert' => $credentials['cert'],
+            'ssl_key' => $credentials['privateKey']
         ];
 
         return new Client($options, $apiKey, $apiSecret);

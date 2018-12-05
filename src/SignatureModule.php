@@ -37,24 +37,22 @@ class SignatureModule implements
      * @param \SetaPDF_Signer $signer The main signer instance (used to disable the automatic change of the signature
      *                                length)
      * @param Client $client A REST client instance
+     * @param Identity $identity The identity object
      * @param \SetaPDF_Signer_Signature_Module_Cms $module An outer signature module instance which is used for CMS
      *                                                     creation while the signature value is created and set by this
      *                                                     class.
      */
-    public function __construct(\SetaPDF_Signer $signer, Client $client, \SetaPDF_Signer_Signature_Module_Cms $module)
+    public function __construct(
+        \SetaPDF_Signer $signer,
+        Client $client,
+        Identity $identity,
+        \SetaPDF_Signer_Signature_Module_Cms $module)
     {
         $signer->setAllowSignatureContentLengthChange(false);
 
         $this->client = $client;
-        $this->module = $module;
-    }
-
-    /**
-     * @param Identity $identity
-     */
-    public function setIdentity(Identity $identity)
-    {
         $this->identity = $identity;
+        $this->module = $module;
     }
 
     /**
@@ -62,10 +60,6 @@ class SignatureModule implements
      */
     public function getCertificate()
     {
-        if ($this->identity === null) {
-            throw new \BadMethodCallException('No identity set.');
-        }
-
         return $this->identity->getSigningCertificate();
     }
 
@@ -79,10 +73,6 @@ class SignatureModule implements
      */
     public function createSignature(\SetaPDF_Core_Reader_FilePath $tmpPath): string
     {
-        if ($this->identity === null) {
-            throw new \BadMethodCallException('No identity set.');
-        }
-
         $this->module->setCertificate($this->identity->getSigningCertificate());
         $this->module->setExtraCertificates([$this->client->getCertificatePath()]);
 

@@ -34,7 +34,7 @@ Add following to your composer.json:
 and call `composer update`. You need to define the `repository` to evaluate the dependency to the [SetaPDF-Signer](https://www.setasign.com/signer) component (see [here](https://getcomposer.org/doc/faqs/why-can%27t-composer-load-repositories-recursively.md) for more details).
 
 ### Evaluation version
-By default this packages depends on a licensed version of the SetaPDF-Signer component. If you want to use it with an evaluation version please use following in your composer.json:
+By default this packages depends on a licensed version of the [SetaPDF-Signer](https://www.setasign.com/signer) component. If you want to use it with an evaluation version please use following in your composer.json:
 
 ```json
 {
@@ -114,15 +114,17 @@ $signature = $client->sign($identity, hash('sha256', $data));
 
 ### The `SignatureModule` class
 
-This is the main signature module which can be used with the [SetaPDF-Signer](https://www.setasign.com/signer) component. Its constructor requires 3 arguments:
+This is the main signature module which can be used with the [SetaPDF-Signer](https://www.setasign.com/signer) component. Its constructor requires 4 arguments:
 
 `$signer` is the instance of the `\SetaPDF_Signer` class to which the module is passed afterwards. Internally [`$signer->setAllowSignatureContentLengthChange(false)`](https://manuals.setasign.com/api-reference/setapdf/c/SetaPDF.Signer#method_setAllowSignatureContentLengthChange) is called to prohibit redundant signature requests.
 
 `$client` needs to be the `Dss\Client` instance.
 
+`$identity` a `Dss\Identity` instance.
+
 `$module` needs to be a [CMS](https://manuals.setasign.com/api-reference/setapdf/c/SetaPDF.Signer.Signature.Module.Cms) or [PAdES](https://manuals.setasign.com/api-reference/setapdf/c/SetaPDF.Signer.Signature.Module.Pades) signature module instance. It is used internally to create the CMS container.
 
-The module additionally requires an `Identity` passed to the `setIdentity()` method before it is used with the `\SetaPDF_Signer` instance. A simple complete signature process would look like this:
+A simple complete signature process would look like this:
 
 ```php
 // setup the client and identity
@@ -145,9 +147,54 @@ $signer = new \SetaPDF_Signer($document);
 $signer->setSignatureContentLength(15000);
 
 $pades = new \SetaPDF_Signer_Signature_Module_Pades();
-$module = new Dss\SignatureModule($signer, $client, $pades);
-$module->setIdentity($identity);
+$module = new Dss\SignatureModule($signer, $client, $identity, $pades);
  
 $signer->sign($module);
 ```
 
+### The `TimestampModule` class
+
+This module can be used to add timestamps to the digital signature or to create document level timestamps. It's constructor simply requires a `Dss\Client` instance:
+
+```php
+$tsmodule = new Dss\TimestampModule($client);
+```
+
+It doesn't requires an identity as the signature module but can be passed as it is to the `\SetaPDF_Signer` instance:
+
+```php
+$signer->setTimestampModule($tsmodule);
+// ...
+$signer->sign($module);
+```
+
+or you can create a document level timestamp with it:
+
+```php
+$signer->setTimestampModule($tsmodule);
+// ...
+$signer->timestamp();
+``` 
+
+## Information about Tests
+
+The test suite currently only comes with functional tests, which invoke **real service calls**! Keep in mind that these calls are deducted from your signature contingent and you should not execute these tests in an automated environment!
+
+To execute the tests, you need to create a folder in the root of this package with the following file:
+
+```
+/private/
+    credentials.php
+``` 
+
+The `credentials.php` file needs to return your credentials, certificate and private key:
+```php
+<?php
+        
+return [
+    'apiKey' => '<YOUR API KEY>',
+    'apiSecret' => '<YOUR API SECRET>',
+    'cert' => '/path/to/your/mTLS/certificate.pem',
+    'privateKey' => '/path/to/your/private/key.pem'
+];
+```

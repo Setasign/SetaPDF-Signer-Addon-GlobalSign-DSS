@@ -9,26 +9,6 @@ use setasign\SetaPDF\Signer\Module\GlobalSign\Dss\TimestampModule;
 class SignatureModuleTest extends TestHelper
 {
     /**
-     * @throws \SetaPDF_Signer_Exception
-     * @expectedException \BadMethodCallException
-     * @expectedExceptionMessage No identity set
-     */
-    public function testSignWithoutIdentity()
-    {
-        $writer = new \SetaPDF_Core_Writer_String();
-        $document = new \SetaPDF_Core_Document($writer);
-        $document->getCatalog()->getPages()->create('a4');
-
-        $signer = new \SetaPDF_Signer($document);
-
-        $client = $this->getClientInstance();
-        $cms = new \SetaPDF_Signer_Signature_Module_Cms();
-        $module = new SignatureModule($signer, $client, $cms);
-
-        $signer->sign($module);
-    }
-
-    /**
      * @throws \GuzzleHttp\Exception\GuzzleException
      * @throws \SetaPDF_Signer_Exception
      */
@@ -42,11 +22,9 @@ class SignatureModuleTest extends TestHelper
         $field = $signer->getSignatureField();
 
         $client = $this->getClientInstance();
-        $pades = new \SetaPDF_Signer_Signature_Module_Pades();
-        $module = new SignatureModule($signer, $client, $pades);
-
         $identity = $client->getIdentity();
-        $module->setIdentity($identity);
+        $pades = new \SetaPDF_Signer_Signature_Module_Pades();
+        $module = new SignatureModule($signer, $client, $identity, $pades);
 
         $signer->sign($module);
 
@@ -75,11 +53,9 @@ class SignatureModuleTest extends TestHelper
         $module = new TimestampModule($client);
         $signer->setTimestampModule($module);
 
-        $pades = new \SetaPDF_Signer_Signature_Module_Pades();
-        $module = new SignatureModule($signer, $client, $pades);
-
         $identity = $client->getIdentity();
-        $module->setIdentity($identity);
+        $pades = new \SetaPDF_Signer_Signature_Module_Pades();
+        $module = new SignatureModule($signer, $client, $identity, $pades);
 
         $signer->sign($module);
 
@@ -97,13 +73,12 @@ class SignatureModuleTest extends TestHelper
 
         $signer = new \SetaPDF_Signer($document);
         $signer->setSignatureContentLength(15000);
+
         $client = $this->getClientInstance();
+        $identity = $client->getIdentity();
 
         $pades = new \SetaPDF_Signer_Signature_Module_Pades();
-        $module = new SignatureModule($signer, $client, $pades);
-
-        $identity = $client->getIdentity();
-        $module->setIdentity($identity);
+        $module = new SignatureModule($signer, $client, $identity, $pades);
 
         $appearance = new \SetaPDF_Signer_Signature_Appearance_Dynamic($module);
         $signer->setAppearance($appearance);
