@@ -1,0 +1,36 @@
+{
+    "name": "setasign/seta-pdf-signer-addon-global-sign-dss",
+    "description": "A SetaPDF-Signer component signature module for the GlobalSign Digital Signing Service.",
+    "type": "library",
+    "require": {
+        "php": "^7.1",
+        "guzzlehttp/guzzle": "^6.0",
+        "setasign/setapdf-signer": "^2.29"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^7.0"
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Jan Slabon",
+            "email": "jan.slabon@setasign.com"
+        }
+    ],
+    "repositories": [
+        {
+            "type": "composer",
+            "url": "https://www.setasign.com/downloads/"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "setasign\\SetaPDF\\Signer\\Module\\GlobalSign\\Dss\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "setasign\\SetaPDF\\Signer\\Module\\GlobalSign\\Dss\\tests\\": "tests/"
+        }
+    }
+}
