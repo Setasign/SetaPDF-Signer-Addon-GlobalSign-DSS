@@ -90,6 +90,56 @@ class SignatureModuleTest extends TestHelper
         );
     }
 
+    public function testVisibleSignature()
+    {
+        $writer = new \SetaPDF_Core_Writer_TempFile();
+        $document = \SetaPDF_Core_Document::loadByFilename(__DIR__ . '/../_files/Laboratory-Report.pdf', $writer);
+
+        $signer = new \SetaPDF_Signer($document);
+        $signer->setSignatureContentLength(15000);
+        $client = $this->getClientInstance();
+
+        $pades = new \SetaPDF_Signer_Signature_Module_Pades();
+        $module = new SignatureModule($signer, $client, $pades);
+
+        $identity = $client->getIdentity();
+        $module->setIdentity($identity);
+
+        $appearance = new \SetaPDF_Signer_Signature_Appearance_Dynamic($module);
+        $signer->setAppearance($appearance);
+
+        $field = $signer->addSignatureField(
+            'Signature',
+            1,
+            \SetaPDF_Signer_SignatureField::POSITION_LEFT_TOP,
+            ['x' => 10, 'y' => -10],
+            150,
+            60
+        );
+        $signer->setSignatureFieldName($field->getQualifiedName());
+
+        $signer->sign($module);
+
+//        copy($writer->getPath(), 'visible-signature.pdf');
+
+        $this->assertTrue(
+            $this->validate($writer->getPath(), $field->getQualifiedName(), $identity->getSigningCertificate())
+        );
+
+        $document = \SetaPDF_Core_Document::loadByFilename($writer->getPath());
+
+        $field = \SetaPDF_Signer_SignatureField::get($document, 'Signature', false);
+        $this->assertInstanceOf(\SetaPDF_Signer_SignatureField::class, $field);
+
+        $dict = $field->getDictionary();
+        /** @var \SetaPDF_Core_Type_Stream $n2 */
+        $n2 = $dict->getValue('AP')->getValue('N')->ensure()->getValue()->getValue('Resources')->getValue('XObject')
+            ->getValue('FRM')->ensure()->getValue()->getValue('Resources')->getValue('XObject')->getValue('n2')
+            ->ensure();
+
+        $this->assertNotFalse(strpos($n2->getStream(), 'Digitally signed by'));
+    }
+
     protected function getSignatureDetails($path, $signatureFieldName)
     {
         $signatureFieldName = \SetaPDF_Core_Encoding::convertPdfString($signatureFieldName);

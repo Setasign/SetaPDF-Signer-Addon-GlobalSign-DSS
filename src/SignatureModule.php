@@ -60,7 +60,7 @@ class SignatureModule implements
     /**
      * @return string
      */
-    protected function getCertificate()
+    public function getCertificate()
     {
         if ($this->identity === null) {
             throw new \BadMethodCallException('No identity set.');
