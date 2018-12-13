@@ -19,34 +19,34 @@ Add following to your composer.json:
 
 ```json
 {
+    "require": {
+        "setasign/seta-pdf-signer-addon-global-sign-dss": "^1.0"
+    },
     "repositories": [
         {
             "type": "composer",
             "url": "https://www.setasign.com/downloads/"
         }
-    ],
-    "require": {
-        "setasign/seta-pdf-signer-addon-global-sign-dss": "^1.0"
-    }
+    ]
 }
 ```
 
-and call `composer update`. You need to define the `repository` to evaluate the dependency to the [SetaPDF-Signer](https://www.setasign.com/signer) component (see [here](https://getcomposer.org/doc/faqs/why-can%27t-composer-load-repositories-recursively.md) for more details).
+and execute `composer update`. You need to define the `repository` to evaluate the dependency to the [SetaPDF-Signer](https://www.setasign.com/signer) component (see [here](https://getcomposer.org/doc/faqs/why-can%27t-composer-load-repositories-recursively.md) for more details).
 
 ### Evaluation version
 By default this packages depends on a licensed version of the [SetaPDF-Signer](https://www.setasign.com/signer) component. If you want to use it with an evaluation version please use following in your composer.json:
 
 ```json
 {
+    "require": {
+        "setasign/seta-pdf-signer-addon-global-sign-dss": "dev-evaluation"
+    },
     "repositories": [
         {
             "type": "composer",
             "url": "https://www.setasign.com/downloads/"
         }
-    ],
-    "require": {
-        "setasign/seta-pdf-signer-addon-global-sign-dss": "dev-evaluation"
-    }
+    ]
 }
 ```
 
@@ -54,7 +54,7 @@ By default this packages depends on a licensed version of the [SetaPDF-Signer](h
 
 Make sure, that the [SetaPDF-Signer](https://www.setasign.com/signer) component is [installed](https://manuals.setasign.com/setapdf-core-manual/installation/#index-2) and its [autoloader is registered](https://manuals.setasign.com/setapdf-core-manual/getting-started/#index-1) correctly.
 
-Then simply require the `src/autoload.php` file or register this package in your own PSR-4 compatible autoloader implementation:
+Then simply require the `src/autoload.php` file or register this package in your own PSR-4 compatible autoload implementation:
 
 ```php
 $loader = new \Example\Psr4AutoloaderClass;
