@@ -24,6 +24,9 @@ class TimestampModule implements
      */
     protected $identity;
 
+    /**
+     * @param Client $client
+     */
     public function __construct(Client $client)
     {
         $this->client = $client;
@@ -50,7 +53,7 @@ class TimestampModule implements
      * @param string|\SetaPDF_Core_Reader_FilePath $data The hash of the main signature
      * @return string
      */
-    protected function getHash($data)
+    protected function getHash($data): string
     {
         if ($data instanceof \SetaPDF_Core_Reader_FilePath) {
             return \hash_file('sha256', $data->getPath());

@@ -58,7 +58,7 @@ class SignatureModule implements
     /**
      * @return string
      */
-    public function getCertificate()
+    public function getCertificate(): string
     {
         return $this->identity->getSigningCertificate();
     }
@@ -77,7 +77,7 @@ class SignatureModule implements
         $this->module->setExtraCertificates([$this->client->getCertificatePath()]);
 
         // For backwards compatibility
-        if (method_exists($this->module, 'setOcspResponse')) {
+        if (\method_exists($this->module, 'setOcspResponse')) {
             $this->module->setOcspResponse($this->identity->getOcspResponse());
         } else {
             $this->addOcspResponse();
@@ -93,9 +93,12 @@ class SignatureModule implements
 
     /**
      * Adds the OCSP response as a signed attribute in the CMS container.
+     *
+     * @throws \SetaPDF_Signer_Exception
      */
     protected function addOcspResponse(): void
     {
+        /** @var \SetaPDF_Signer_Asn1_Element $cms */
         $cms = $this->module->getCms();
         $signerInfos = \SetaPDF_Signer_Asn1_Element::findByPath('1/0/4', $cms);
         if (($signerInfos->getIdent() & "\xA1") === "\xA1") {
