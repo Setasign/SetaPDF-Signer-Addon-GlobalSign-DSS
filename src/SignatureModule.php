@@ -1,6 +1,6 @@
 <?php
 /**
- * @copyright Copyright (c) 2018 Setasign - Jan Slabon (https://www.setasign.com)
+ * @copyright Copyright (c) 2019 Setasign - Jan Slabon (https://www.setasign.com)
  * @license   http://opensource.org/licenses/mit-license The MIT License
  */
 
@@ -78,7 +78,7 @@ class SignatureModule implements
 
         // For backwards compatibility
         if (\method_exists($this->module, 'setOcspResponse')) {
-            $this->module->setOcspResponse($this->identity->getOcspResponse());
+            $this->module->setOcspResponse(\base64_decode($this->identity->getOcspResponse()));
         } else {
             $this->addOcspResponse();
         }
