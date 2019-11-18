@@ -5,7 +5,7 @@
     "require": {
         "php": "^7.1",
         "guzzlehttp/guzzle": "^6.0",
-        "setasign/setapdf-signer": "^2.29"
+        "setasign/setapdf-signer": "^2.31"
     },
     "require-dev": {
         "phpunit/phpunit": "^7.0"

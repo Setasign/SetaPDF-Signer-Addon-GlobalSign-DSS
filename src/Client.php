@@ -242,4 +242,21 @@ class Client
 
         return \json_decode($response->getBody()->getContents())->token;
     }
+
+    /**
+     * Query the chain of trust for the certificates issued by the calling account and the revocation info for the
+     * certificates in the chain
+     *
+     * @return \stdClass
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    public function getTrustchain(): \stdClass
+    {
+        $options = $this->options;
+        $options['headers'] = ['Authorization' => 'Bearer ' . $this->login()];
+
+        $response = $this->client->request('GET', '/trustchain', $options);
+
+        return \json_decode($response->getBody()->getContents());
+    }
 }
