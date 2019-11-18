@@ -74,13 +74,12 @@ class SignatureModule implements
     public function createSignature(\SetaPDF_Core_Reader_FilePath $tmpPath): string
     {
         $this->module->setCertificate($this->identity->getSigningCertificate());
-        $this->module->setExtraCertificates([$this->client->getCertificatePath()]);
+        $trustChain = $this->client->getTrustchain();
+        $this->module->setExtraCertificates($trustChain->trustchain);
 
-        // For backwards compatibility
-        if (\method_exists($this->module, 'setOcspResponse')) {
-            $this->module->setOcspResponse(\base64_decode($this->identity->getOcspResponse()));
-        } else {
-            $this->addOcspResponse();
+        $this->module->addOcspResponse(\base64_decode($this->identity->getOcspResponse()));
+        foreach ($trustChain->ocsp_revocation_info as $ocspRevocationInfo) {
+            $this->module->addOcspResponse(\base64_decode($ocspRevocationInfo));
         }
 
         $hash = \hash('sha256', $this->module->getDataToSign($tmpPath));
@@ -89,62 +88,6 @@ class SignatureModule implements
         $this->module->setSignatureValue(\SetaPDF_Core_Type_HexString::hex2str($signature));
 
         return (string)$this->module->getCms();
-    }
-
-    /**
-     * Adds the OCSP response as a signed attribute in the CMS container.
-     *
-     * @throws \SetaPDF_Signer_Exception
-     */
-    protected function addOcspResponse(): void
-    {
-        /** @var \SetaPDF_Signer_Asn1_Element $cms */
-        $cms = $this->module->getCms();
-        $signerInfos = \SetaPDF_Signer_Asn1_Element::findByPath('1/0/4', $cms);
-        if (($signerInfos->getIdent() & "\xA1") === "\xA1") {
-            $signerInfos = \SetaPDF_Signer_Asn1_Element::findByPath('1/0/5', $cms);
-        }
-
-        $signedAttributes = \SetaPDF_Signer_Asn1_Element::findByPath('0/3', $signerInfos);
-        $signedAttributes->addChild(new \SetaPDF_Signer_Asn1_Element(
-            \SetaPDF_Signer_Asn1_Element::SEQUENCE | \SetaPDF_Signer_Asn1_Element::IS_CONSTRUCTED, '',
-            array(
-                new \SetaPDF_Signer_Asn1_Element(
-                    \SetaPDF_Signer_Asn1_Element::OBJECT_IDENTIFIER,
-                    \SetaPDF_Signer_Asn1_Oid::encode('1.2.840.113583.1.1.8')
-                ),
-                new \SetaPDF_Signer_Asn1_Element(
-                    \SetaPDF_Signer_Asn1_Element::SET | \SetaPDF_Signer_Asn1_Element::IS_CONSTRUCTED, '',
-                    array(
-                        /**
-                         * RevocationInfoArchival ::= SEQUENCE {
-                         *   crl [0] EXPLICIT SEQUENCE of CRLs, OPTIONAL
-                         *   ocsp [1] EXPLICIT SEQUENCE of OCSP Responses, OPTIONAL
-                         *   otherRevInfo [2] EXPLICIT SEQUENCE of OtherRevInfo, OPTIONAL
-                         * }
-                         */
-                        new \SetaPDF_Signer_Asn1_Element(
-                            \SetaPDF_Signer_Asn1_Element::SEQUENCE | \SetaPDF_Signer_Asn1_Element::IS_CONSTRUCTED, '',
-                            array(
-                                new \SetaPDF_Signer_Asn1_Element(
-                                    \SetaPDF_Signer_Asn1_Element::TAG_CLASS_CONTEXT_SPECIFIC | \SetaPDF_Signer_Asn1_Element::IS_CONSTRUCTED | "\x01", '',
-                                    array(
-                                        new \SetaPDF_Signer_Asn1_Element(
-                                            \SetaPDF_Signer_Asn1_Element::SEQUENCE | \SetaPDF_Signer_Asn1_Element::IS_CONSTRUCTED, '',
-                                            array(
-                                                \SetaPDF_Signer_Asn1_Element::parse(
-                                                    \base64_decode($this->identity->getOcspResponse())
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    )
-                )
-            )
-        ));
     }
 
     /**

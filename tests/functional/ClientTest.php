@@ -247,4 +247,17 @@ class ClientTest extends TestHelper
         $timestamp = $client->timestamp(\hash_file('sha256', __FILE__));
         $this->assertSame(\strlen($timestamp), 2788);
     }
+
+    /**
+     * @param Client $client
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @depends testForceLogin
+     */
+    public function testGetTrustchain(Client $client)
+    {
+        $trustChain = $client->getTrustchain();
+
+        $this->assertTrue(isset($trustChain->trustchain));
+        $this->assertTrue(isset($trustChain->ocsp_revocation_info));
+    }
 }
