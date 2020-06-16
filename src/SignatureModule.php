@@ -32,6 +32,11 @@ class SignatureModule implements
     protected $identity;
 
     /**
+     * @var bool
+     */
+    protected $addRevocationInfo = true;
+
+    /**
      * The constructor.
      *
      * @param \SetaPDF_Signer $signer The main signer instance (used to disable the automatic change of the signature
@@ -64,6 +69,16 @@ class SignatureModule implements
     }
 
     /**
+     * Define whether to add revocation information to the CMS container or not (default = true).
+     *
+     * @param bool $addRevocationInfo
+     */
+    public function setAddRevocationInfo($addRevocationInfo)
+    {
+        $this->addRevocationInfo = (bool)$addRevocationInfo;
+    }
+
+    /**
      * Create a signature for the file in the given $tmpPath.
      *
      * @param \SetaPDF_Core_Reader_FilePath $tmpPath
@@ -77,9 +92,11 @@ class SignatureModule implements
         $trustChain = $this->client->getTrustchain();
         $this->module->setExtraCertificates($trustChain->trustchain);
 
-        $this->module->addOcspResponse(\base64_decode($this->identity->getOcspResponse()));
-        foreach ($trustChain->ocsp_revocation_info as $ocspRevocationInfo) {
-            $this->module->addOcspResponse(\base64_decode($ocspRevocationInfo));
+        if ($this->addRevocationInfo) {
+            $this->module->addOcspResponse(\base64_decode($this->identity->getOcspResponse()));
+            foreach ($trustChain->ocsp_revocation_info as $ocspRevocationInfo) {
+                $this->module->addOcspResponse(\base64_decode($ocspRevocationInfo));
+            }
         }
 
         $hash = \hash('sha256', $this->module->getDataToSign($tmpPath));

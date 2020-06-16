@@ -20,7 +20,7 @@ class ClientTest extends TestHelper
 
     /**
      * @expectedException \GuzzleHttp\Exception\ClientException
-     * @expectedExceptionMessage 422 Unprocessable Entity
+     * @expectedExceptionMessage 400 Bad Request
      */
     public function testFailedLogin()
     {
