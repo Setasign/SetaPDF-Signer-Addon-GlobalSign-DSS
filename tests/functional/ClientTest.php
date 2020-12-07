@@ -20,7 +20,7 @@ class ClientTest extends TestHelper
 
     /**
      * @expectedException \GuzzleHttp\Exception\ClientException
-     * @expectedExceptionMessage 422 Unprocessable Entity
+     * @expectedExceptionMessage 400 Bad Request
      */
     public function testFailedLogin()
     {
@@ -245,7 +245,7 @@ class ClientTest extends TestHelper
     public function testTimestamp(Client $client)
     {
         $timestamp = $client->timestamp(\hash_file('sha256', __FILE__));
-        $this->assertSame(\strlen($timestamp), 2788);
+        $this->assertSame(\strlen($timestamp), 2792);
     }
 
     /**

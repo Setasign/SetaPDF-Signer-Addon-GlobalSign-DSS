@@ -3,7 +3,7 @@
     "description": "A SetaPDF-Signer component signature module for the GlobalSign Digital Signing Service.",
     "type": "library",
     "require": {
-        "php": "^7.1",
+        "php": "^7.1 || ^8.0",
         "guzzlehttp/guzzle": "^6.0",
         "setasign/setapdf-signer_eval_ioncube_php7.1": "^2.32"
     },
