@@ -5,7 +5,6 @@ namespace setasign\SetaPDF\Signer\Module\GlobalSign\Dss\tests\functional;
 use PHPUnit\Framework\TestCase;
 use setasign\SetaPDF\Signer\Module\GlobalSign\Dss\Client;
 
-
 class TestHelper extends TestCase
 {
     protected function getClientInstance(array $options = null, $apiKey = null, $apiSecret = null)

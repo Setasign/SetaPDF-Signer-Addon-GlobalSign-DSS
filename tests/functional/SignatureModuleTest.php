@@ -211,7 +211,7 @@ class SignatureModuleTest extends TestHelper
         if ($signerInfo->getChild(3)->getIdent() === "\xA0") { // [0] IMPLICIT
             $_signedAttributes = $signerInfo->getChild(3)->getChildren();
             $signedAttributes = array();
-            foreach ($_signedAttributes AS $attribute) {
+            foreach ($_signedAttributes as $attribute) {
                 $attrType = $attribute->getChild(0)->getValue();
                 $attrTypeOid = \SetaPDF_Signer_Asn1_Oid::decode($attrType);
                 $signedAttributes[$attrTypeOid] = $attribute->getChild(1);

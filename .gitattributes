@@ -1,0 +1,2 @@
+*.php text eol=lf
+vendor-bin/**/composer.lock binary
