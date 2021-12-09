@@ -1,6 +1,8 @@
 # SetaPDF-Signer component modules for the GlobalSign Digital Signing Service.
 
-This package offers modules for the [SetaPDF-Signer](https://www.setasign.com/signer) component that allow you to use the [Cloud-based Digital Signing Service](https://www.globalsign.com/en/digital-signatures/cloud/) by [GlobalSign](https://www.globalsign.com) to **digital sign and timestamp PDF documents in pure PHP**.
+This package offers modules for the [SetaPDF-Signer](https://www.setasign.com/signer) component that allow you 
+to use the [Cloud-based Digital Signing Service](https://www.globalsign.com/en/digital-signatures/cloud/) by
+[GlobalSign](https://www.globalsign.com) to **digital sign and timestamp PDF documents in pure PHP**.
 
 ## Requirements
 
@@ -12,7 +14,29 @@ To use this package you need credentials for the GlobalSign Digital Signing Serv
 
 See "GlobalSign-Digital-Signing-Service-Guide 1.3.pdf" (or newer) for details. Ask a GlobalSign contact for this document. 
 
-This package is developed and tested on PHP >= 7.1. Requirements of the [SetaPDF-Signer](https://www.setasign.com/signer) component can be found [here](https://manuals.setasign.com/setapdf-signer-manual/getting-started/#index-1).
+This package is developed and tested on PHP >= 7.1. Requirements of the [SetaPDF-Signer](https://www.setasign.com/signer) 
+component can be found [here](https://manuals.setasign.com/setapdf-signer-manual/getting-started/#index-1).
+
+We're using [PSR-17 (HTTP Factories)](https://www.php-fig.org/psr/psr-17/) and
+[PSR-18 (HTTP Client)](https://www.php-fig.org/psr/psr-18/) for the requests. So you'll need an implementation of
+these. We recommend using Guzzle.
+
+### For PHP 7.1
+```
+    "require" : {
+        "guzzlehttp/guzzle": "^6.5",
+        "http-interop/http-factory-guzzle": "^1.0",
+        "mjelamanov/psr18-guzzle": "^1.3"
+    }
+```
+
+### For >= PHP 7.2
+```
+    "require" : {
+        "guzzlehttp/guzzle": "^7.0",
+        "http-interop/http-factory-guzzle": "^1.0"
+    }
+```
 
 ## Installation
 Add following to your composer.json:
@@ -20,7 +44,7 @@ Add following to your composer.json:
 ```json
 {
     "require": {
-        "setasign/seta-pdf-signer-addon-global-sign-dss": "^1.0"
+        "setasign/seta-pdf-signer-addon-global-sign-dss": "^2.0"
     },
     "repositories": [
         {
@@ -31,10 +55,13 @@ Add following to your composer.json:
 }
 ```
 
-and execute `composer update`. You need to define the `repository` to evaluate the dependency to the [SetaPDF-Signer](https://www.setasign.com/signer) component (see [here](https://getcomposer.org/doc/faqs/why-can%27t-composer-load-repositories-recursively.md) for more details).
+and execute `composer update`. You need to define the `repository` to evaluate the dependency to the 
+[SetaPDF-Signer](https://www.setasign.com/signer) component (see 
+[here](https://getcomposer.org/doc/faqs/why-can%27t-composer-load-repositories-recursively.md) for more details).
 
 ### Evaluation version
-By default this packages depends on a licensed version of the [SetaPDF-Signer](https://www.setasign.com/signer) component. If you want to use it with an evaluation version please use following in your composer.json:
+By default, this packages depends on a licensed version of the [SetaPDF-Signer](https://www.setasign.com/signer) component.
+If you want to use it with an evaluation version please use following in your composer.json:
 
 ```json
 {
@@ -50,38 +77,28 @@ By default this packages depends on a licensed version of the [SetaPDF-Signer](h
 }
 ```
 
-### Without Composer
-
-Make sure, that the [SetaPDF-Signer](https://www.setasign.com/signer) component is [installed](https://manuals.setasign.com/setapdf-core-manual/installation/#index-2) and its [autoloader is registered](https://manuals.setasign.com/setapdf-core-manual/getting-started/#index-1) correctly.
-
-Then simply require the `src/autoload.php` file or register this package in your own PSR-4 compatible autoload implementation:
-
-```php
-$loader = new \Example\Psr4AutoloaderClass;
-$loader->register();
-$loader->addNamespace('setasign\SetaPDF\Signer\Module\GlobalSign\Dss', 'path/to/src/');
-```
-
 ## Usage
 
 All classes in this package are located in the namespace `setasign\SetaPDF\Signer\Module\GlobalSign\Dss`.
 
 ### The `Client` class
 
-There's a simple `Client` class which wraps the [REST API](https://downloads.globalsign.com/acton/media/2674/digital-signing-service-api-documentation) into  simple PHP methods. It handles the authentication, requests and responses internally. For the communication with the API it uses [Guzzle](http://guzzlephp.org/).
+There's a simple `Client` class which wraps the [REST API](https://downloads.globalsign.com/acton/media/2674/digital-signing-service-api-documentation) 
+into  simple PHP methods. It handles the authentication, requests and responses internally.
 
-The constructor of this class requires 3 arguments: 
+The constructor of this class requires these: 
 
-`$options` which are the [request options](http://docs.guzzlephp.org/en/stable/request-options.html) for Guzzle. To authenticate to the API endpoint it requires the `cert` (the client certificated issued by GlobalSign) and `ssl_key` (your private key) options. The `headers` and `body` options are set/overwritten internally.
- 
-`$apiKey` is your API key received from GlobalSign.
- 
-`$apiSecret` is the secret to your API key received from GlobalSign.
+- `$httpClient` PSR-18 HTTP Client implementation.
+- `$requestFactory` PSR-17 HTTP Factory implementation.
+- `$streamFactory` PSR-17 HTTP Factory implementation.
+- `$apiKey` is your API key received from GlobalSign.
+- `$apiSecret` is the secret to your API key received from GlobalSign.
 
 A common creation could look like:
 
 ```php
 $options = [
+    'http_errors' => false, // recommended for guzzle - because of PSR-18
     'cert' => 'path/to/tls-cert.pem',
     'ssl_key' => 'path/to/private/key.pem'  
 ];
@@ -89,7 +106,13 @@ $options = [
 $apiKey = 'xxxxxxxxxxxxxxxx';
 $apiSecret = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
 
-$client = new Dss\Client($options, $apiKey, $apiSecret);
+$httpClient = new GuzzleHttp\Client($options);
+// if you are using php 7.0 or 7.1
+//$httpClient = new Mjelamanov\GuzzlePsr18\Client($httpClient);
+$requestFactory = new Http\Factory\Guzzle\RequestFactory();
+$streamFactory = new Http\Factory\Guzzle\StreamFactory();
+
+$client = new Dss\Client($httpClient, $requestFactory, $streamFactory, $apiKey, $apiSecret);
 ```
 
 You can use this instance to e.g. query general information:
@@ -100,13 +123,18 @@ $remainingSignatures = $client->getQuota(Dss\Client::TYPE_SIGNATURES);
 $signaturesCount = $client->getCount(Dss\Client::TYPE_SIGNATURES);
 ```
 
-To create a digital signature you need to create a signing certificate first which can be done with the `getIdentity()` method. The argument to this method can be an associative array as defined [here](https://downloads.globalsign.com/acton/media/2674/digital-signing-service-api-documentation#identity_post). The method will return an `Identity` instance which is nothing more than a data wrapper of the returned id, signing certificate and OCSP response.
+To create a digital signature you need to create a signing certificate first which can be done with the `getIdentity()`
+method. The argument to this method can be an associative array as defined 
+[here](https://downloads.globalsign.com/acton/media/2674/digital-signing-service-api-documentation#identity_post). 
+The method will return an `Identity` instance which is nothing more than a data wrapper of the returned id, signing
+certificate and OCSP response.
 
 ```php
 $identity = $client->getIdentity();
 ```
 
-This `Identity` needs to be forward to the signature module which internally passes it back to the `Dss\Client\sign()` method to get the final signature. It is also possible to use this method individually (just for completion):
+This `Identity` needs to be forward to the signature module which internally passes it back to the `Dss\Client\sign()`
+method to get the final signature. It is also possible to use this method individually (just for completion):
 
 ```php
 $signature = $client->sign($identity, hash('sha256', $data));
@@ -114,21 +142,20 @@ $signature = $client->sign($identity, hash('sha256', $data));
 
 ### The `SignatureModule` class
 
-This is the main signature module which can be used with the [SetaPDF-Signer](https://www.setasign.com/signer) component. Its constructor requires 4 arguments:
+This is the main signature module which can be used with the [SetaPDF-Signer](https://www.setasign.com/signer) component.
+Its constructor requires these arguments:
 
-`$signer` is the instance of the `\SetaPDF_Signer` class to which the module is passed afterwards. Internally [`$signer->setAllowSignatureContentLengthChange(false)`](https://manuals.setasign.com/api-reference/setapdf/c/SetaPDF.Signer#method_setAllowSignatureContentLengthChange) is called to prohibit redundant signature requests.
-
-`$client` needs to be the `Dss\Client` instance.
-
-`$identity` a `Dss\Identity` instance.
-
-`$module` needs to be a [CMS](https://manuals.setasign.com/api-reference/setapdf/c/SetaPDF.Signer.Signature.Module.Cms) or [PAdES](https://manuals.setasign.com/api-reference/setapdf/c/SetaPDF.Signer.Signature.Module.Pades) signature module instance. It is used internally to create the CMS container.
+- `$signer` is the instance of the `\SetaPDF_Signer` class to which the module is passed afterwards. Internally [`$signer->setAllowSignatureContentLengthChange(false)`](https://manuals.setasign.com/api-reference/setapdf/c/SetaPDF.Signer#method_setAllowSignatureContentLengthChange) is called to prohibit redundant signature requests.
+- `$client` needs to be the `Dss\Client` instance.
+- `$identity` a `Dss\Identity` instance.
+- `$module` needs to be a [CMS](https://manuals.setasign.com/api-reference/setapdf/c/SetaPDF.Signer.Signature.Module.Cms) or [PAdES](https://manuals.setasign.com/api-reference/setapdf/c/SetaPDF.Signer.Signature.Module.Pades) signature module instance. It is used internally to create the CMS container.
 
 A simple complete signature process would look like this:
 
 ```php
-// setup the client and identity
+// set up the client and identity
 $options = [
+    'http_errors' => false,
     'cert' => 'path/to/tls-cert.pem',
     'ssl_key' => 'path/to/private/key.pem'  
 ];
@@ -136,7 +163,13 @@ $options = [
 $apiKey = 'xxxxxxxxxxxxxxxx';
 $apiSecret = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
 
-$client = new Dss\Client($options, $apiKey, $apiSecret);
+$httpClient = new GuzzleHttp\Client($options);
+// if you are using php 7.0 or 7.1
+//$httpClient = new Mjelamanov\GuzzlePsr18\Client($httpClient);
+$requestFactory = new Http\Factory\Guzzle\RequestFactory();
+$streamFactory = new Http\Factory\Guzzle\StreamFactory();
+
+$client = new Dss\Client($httpClient, $requestFactory, $streamFactory, $apiKey, $apiSecret);
 $identity = $client->getIdentity();
 
 // now start the signature process
@@ -178,7 +211,8 @@ $signer->timestamp();
 
 ## Information about Tests
 
-The test suite currently only comes with functional tests, which invoke **real service calls**! Keep in mind that these calls are deducted from your signature contingent and you should not execute these tests in an automated environment!
+The test suite currently only comes with functional tests, which invoke **real service calls**! Keep in mind that these
+calls are deducted from your signature contingent. You should not execute these tests in an automated environment!!
 
 To execute the tests, you need to create a folder in the root of this package with the following file:
 

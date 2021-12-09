@@ -1,13 +1,15 @@
 <?php
 
 /**
- * @copyright Copyright (c) 2019 Setasign - Jan Slabon (https://www.setasign.com)
+ * @copyright Copyright (c) 2021 Setasign GmbH & Co. KG (https://www.setasign.com)
  * @license   http://opensource.org/licenses/mit-license The MIT License
  */
 
 declare(strict_types=1);
 
 namespace setasign\SetaPDF\Signer\Module\GlobalSign\Dss;
+
+use Psr\Http\Client\ClientExceptionInterface;
 
 /**
  * The timestamp module for the SetaPDF-Signer component
@@ -38,10 +40,11 @@ class TimestampModule implements
      *
      * @param string|\SetaPDF_Core_Reader_FilePath $data
      * @return \SetaPDF_Signer_Asn1_Element
-     * @throws \GuzzleHttp\Exception\GuzzleException
-     * @throws \SetaPDF_Signer_Exception
+     * @throws Exception
+     * @throws ClientExceptionInterface
+     * @throws \SetaPDF_Signer_Asn1_Exception
      */
-    public function createTimestamp($data)
+    public function createTimestamp($data): \SetaPDF_Signer_Asn1_Element
     {
         $timestamp = $this->client->timestamp($this->getHash($data));
 

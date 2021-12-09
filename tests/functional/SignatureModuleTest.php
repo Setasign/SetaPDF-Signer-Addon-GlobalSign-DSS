@@ -9,8 +9,7 @@ use setasign\SetaPDF\Signer\Module\GlobalSign\Dss\TimestampModule;
 class SignatureModuleTest extends TestHelper
 {
     /**
-     * @throws \GuzzleHttp\Exception\GuzzleException
-     * @throws \SetaPDF_Signer_Exception
+     * @throws \Throwable
      */
     public function testSimpleSignature()
     {
@@ -36,8 +35,7 @@ class SignatureModuleTest extends TestHelper
     }
 
     /**
-     * @throws \GuzzleHttp\Exception\GuzzleException
-     * @throws \SetaPDF_Signer_Exception
+     * @throws \Throwable
      */
     public function testSignatureIncudingTimestamp()
     {
@@ -66,6 +64,9 @@ class SignatureModuleTest extends TestHelper
         );
     }
 
+    /**
+     * @throws \Throwable
+     */
     public function testVisibleSignature()
     {
         $writer = new \SetaPDF_Core_Writer_TempFile();
@@ -236,7 +237,7 @@ class SignatureModuleTest extends TestHelper
         while (\openssl_error_string());
 
         $pkey = \openssl_pkey_get_public($certificate);
-        $res = \openssl_verify($data, $signatureValue, $pkey, \SetaPDF_Signer_Digest::getOpenSslInt($digest));
+        $res = \openssl_verify($data, $signatureValue, $pkey, $digest);
         $this->assertEquals(1, $res, openssl_error_string());
 
         return true;

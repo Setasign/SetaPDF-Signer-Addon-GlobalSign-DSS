@@ -2,29 +2,38 @@
 
 namespace setasign\SetaPDF\Signer\Module\GlobalSign\Dss\tests\functional;
 
+use Http\Factory\Guzzle\RequestFactory;
+use Http\Factory\Guzzle\StreamFactory;
 use PHPUnit\Framework\Constraint\IsType;
+use Psr\Http\Client\ClientExceptionInterface;
 use setasign\SetaPDF\Signer\Module\GlobalSign\Dss\Client;
+use setasign\SetaPDF\Signer\Module\GlobalSign\Dss\Exception;
 use setasign\SetaPDF\Signer\Module\GlobalSign\Dss\Identity;
 
 class ClientTest extends TestHelper
 {
-    /**
-     * @expectedException \GuzzleHttp\Exception\ConnectException
-     * @expectedExceptionMessage cURL error 35
-     */
     public function testWithoutNoClientCertificates(): void
     {
-        $module = new Client([], '', '');
+        $httpClient = new \GuzzleHttp\Client([
+            'http_errors' => false,
+        ]);
+        $httpClient = new \Mjelamanov\GuzzlePsr18\Client($httpClient);
+
+        $module = new Client(
+            $httpClient,
+            new RequestFactory(),
+            new StreamFactory(),
+            '',
+            ''
+        );
+        $this->expectException(ClientExceptionInterface::class);
         $module->login();
     }
 
-    /**
-     * @expectedException \GuzzleHttp\Exception\ClientException
-     * @expectedExceptionMessage 400 Bad Request
-     */
     public function testFailedLogin()
     {
-        $client = $this->getClientInstance(null, 'anything', 'but valid');
+        $client = $this->getClientInstance('anything', 'but valid');
+        $this->expectException(Exception::class);
         $client->login();
     }
 
@@ -64,11 +73,10 @@ class ClientTest extends TestHelper
      * @param Client $client
      * @depends testForceLogin
      * @return Client
-     * @throws \GuzzleHttp\Exception\GuzzleException
      */
     public function testGetQuotaForSignatures(Client $client): Client
     {
-        $this->assertInternalType(IsType::TYPE_INT, $client->getQuota(Client::TYPE_SIGNATURES));
+        $this->assertNotEquals(0, $client->getQuota(Client::TYPE_SIGNATURES));
         return $client;
     }
 
@@ -76,23 +84,21 @@ class ClientTest extends TestHelper
      * @param Client $client
      * @depends testGetQuotaForSignatures
      * @return Client
-     * @throws \GuzzleHttp\Exception\GuzzleException
      */
     public function testGetQuotaForTimestamps(Client $client): Client
     {
-        $this->assertInternalType(IsType::TYPE_INT, $client->getQuota(Client::TYPE_TIMESTAMPS));
+        $this->assertNotEquals(0, $client->getQuota(Client::TYPE_TIMESTAMPS));
         return $client;
     }
 
     /**
      * @param Client $client
      * @depends testGetQuotaForTimestamps
-     * @expectedException \InvalidArgumentException
-     * @expectedExceptionMessage Unknow quota type
      * @throws \GuzzleHttp\Exception\GuzzleException
      */
     public function testGetQuotaWithInvalidType(Client $client)
     {
+        $this->expectException(\InvalidArgumentException::class);
         $client->getQuota('anything');
     }
 
@@ -100,7 +106,6 @@ class ClientTest extends TestHelper
      * @param Client $client
      * @depends testForceLogin
      * @return Client
-     * @throws \GuzzleHttp\Exception\GuzzleException
      */
     public function testGetCountForSignatures(Client $client): Client
     {
@@ -113,7 +118,6 @@ class ClientTest extends TestHelper
      * @param Client $client
      * @depends testGetCountForSignatures
      * @return Client
-     * @throws \GuzzleHttp\Exception\GuzzleException
      */
     public function testGetCountForTimestamps(Client $client): Client
     {
@@ -126,30 +130,26 @@ class ClientTest extends TestHelper
      * @param Client $client
      * @depends testGetCountForTimestamps
      * @return Client
-     * @throws \GuzzleHttp\Exception\GuzzleException
      */
     public function testGetCountForIdentities(Client $client): Client
     {
-        $this->assertInternalType(IsType::TYPE_INT, $client->getCount(Client::TYPE_IDENTITIES));
+        $this->assertNotEquals(0, $client->getCount(Client::TYPE_IDENTITIES));
         return $client;
     }
 
     /**
      * @param Client $client
      * @depends testGetCountForIdentities
-     * @expectedException \InvalidArgumentException
-     * @expectedExceptionMessage Unknow counter type
-     * @throws \GuzzleHttp\Exception\GuzzleException
      */
     public function testGetCountWithInvalidType(Client $client): void
     {
+        $this->expectException(\InvalidArgumentException::class);
         $client->getCount('anything');
     }
 
     /**
      * @param Client $client
      * @depends testForceLogin
-     * @throws \GuzzleHttp\Exception\GuzzleException
      */
     public function testGetCertificatePath(Client $client): void
     {
@@ -159,30 +159,27 @@ class ClientTest extends TestHelper
     /**
      * @param Client $client
      * @depends testForceLogin
-     * @throws \GuzzleHttp\Exception\GuzzleException
      */
     public function testGetValidationPolicy(Client $client): void
     {
         $validationPolicy = $client->getValidationPolicy();
 
-        $this->assertInstanceOf(\stdClass::class, $validationPolicy);
+        $this->assertNotEmpty($validationPolicy);
     }
 
     /**
      * @param Client $client
      * @depends testForceLogin
-     * @expectedException \GuzzleHttp\Exception\ClientException
-     * @throws \GuzzleHttp\Exception\GuzzleException
      */
     public function testGetIdentityWithInvalidData(Client $client): void
     {
+        $this->expectException(Exception::class);
         $client->getIdentity(['testing' => 123]);
     }
 
     /**
      * @param Client $client
      * @return array
-     * @throws \GuzzleHttp\Exception\GuzzleException
      * @depends testForceLogin
      */
     public function testGetIdentityWithoutArguments(Client $client)
@@ -197,31 +194,26 @@ class ClientTest extends TestHelper
     }
 
     /**
-     * @param Client $client
-     * @param $identity
      * @depends testGetIdentityWithoutArguments
-     * @throws \GuzzleHttp\Exception\GuzzleException
-     * @expectedException \GuzzleHttp\Exception\ClientException
-     * @expectedExceptionMessage Malformed digest
      */
     public function testSignWithInvalidHash(array $data)
     {
+        /** @var Client $client */
         [$client, $identity] = $data;
 
-        /** @var Client $client */
+        $this->expectException(Exception::class);
         $client->sign($identity, 'abc');
     }
 
     /**
      * @param array $data
      * @depends testGetIdentityWithoutArguments
-     * @throws \GuzzleHttp\Exception\GuzzleException
      */
     public function testSign(array $data)
     {
+        /** @var Client $client */
         [$client, $identity] = $data;
 
-        /** @var Client $client */
         $signature = $client->sign($identity, \hash_file('sha256', __FILE__));
         $this->assertSame(\strlen($signature), 512);
     }
@@ -229,35 +221,32 @@ class ClientTest extends TestHelper
     /**
      * @param Client $client
      * @depends testForceLogin
-     * @expectedException \GuzzleHttp\Exception\ClientException
-     * @throws \GuzzleHttp\Exception\GuzzleException
      */
     public function testTimestampWithInvalidHash(Client $client)
     {
+        $this->expectException(Exception::class);
         $client->timestamp('abc');
     }
 
     /**
      * @param Client $client
-     * @throws \GuzzleHttp\Exception\GuzzleException
      * @depends testForceLogin
      */
     public function testTimestamp(Client $client)
     {
         $timestamp = $client->timestamp(\hash_file('sha256', __FILE__));
-        $this->assertSame(\strlen($timestamp), 2792);
+        $this->assertSame(\strlen($timestamp), 2788);
     }
 
     /**
      * @param Client $client
-     * @throws \GuzzleHttp\Exception\GuzzleException
      * @depends testForceLogin
      */
     public function testGetTrustchain(Client $client)
     {
         $trustChain = $client->getTrustchain();
 
-        $this->assertTrue(isset($trustChain->trustchain));
-        $this->assertTrue(isset($trustChain->ocsp_revocation_info));
+        $this->assertTrue(isset($trustChain['trustchain']));
+        $this->assertTrue(isset($trustChain['ocsp_revocation_info']));
     }
 }

@@ -1,13 +1,15 @@
 <?php
 
 /**
- * @copyright Copyright (c) 2019 Setasign - Jan Slabon (https://www.setasign.com)
+ * @copyright Copyright (c) 2021 Setasign GmbH & Co. KG (https://www.setasign.com)
  * @license   http://opensource.org/licenses/mit-license The MIT License
  */
 
 declare(strict_types=1);
 
 namespace setasign\SetaPDF\Signer\Module\GlobalSign\Dss;
+
+use Psr\Http\Client\ClientExceptionInterface;
 
 /**
  * The signature module for the SetaPDF-Signer component
@@ -74,9 +76,9 @@ class SignatureModule implements
      *
      * @param bool $addRevocationInfo
      */
-    public function setAddRevocationInfo($addRevocationInfo)
+    public function setAddRevocationInfo(bool $addRevocationInfo)
     {
-        $this->addRevocationInfo = (bool)$addRevocationInfo;
+        $this->addRevocationInfo = $addRevocationInfo;
     }
 
     /**
@@ -84,18 +86,20 @@ class SignatureModule implements
      *
      * @param \SetaPDF_Core_Reader_FilePath $tmpPath
      * @return string
-     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws Exception
+     * @throws ClientExceptionInterface
+     * @throws \SetaPDF_Signer_Asn1_Exception
      * @throws \SetaPDF_Signer_Exception
      */
     public function createSignature(\SetaPDF_Core_Reader_FilePath $tmpPath): string
     {
         $this->module->setCertificate($this->identity->getSigningCertificate());
         $trustChain = $this->client->getTrustchain();
-        $this->module->setExtraCertificates($trustChain->trustchain);
+        $this->module->setExtraCertificates($trustChain['trustchain']);
 
         if ($this->addRevocationInfo) {
             $this->module->addOcspResponse(\base64_decode($this->identity->getOcspResponse()));
-            foreach ($trustChain->ocsp_revocation_info as $ocspRevocationInfo) {
+            foreach ($trustChain['ocsp_revocation_info'] as $ocspRevocationInfo) {
                 $this->module->addOcspResponse(\base64_decode($ocspRevocationInfo));
             }
         }
@@ -105,7 +109,7 @@ class SignatureModule implements
 
         $this->module->setSignatureValue(\SetaPDF_Core_Type_HexString::hex2str($signature));
 
-        return (string)$this->module->getCms();
+        return (string) $this->module->getCms();
     }
 
     /**
