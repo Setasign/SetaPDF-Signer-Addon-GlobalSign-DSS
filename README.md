@@ -86,7 +86,7 @@ All classes in this package are located in the namespace `setasign\SetaPDF\Signe
 There's a simple `Client` class which wraps the [REST API](https://downloads.globalsign.com/acton/media/2674/digital-signing-service-api-documentation) 
 into  simple PHP methods. It handles the authentication, requests and responses internally.
 
-The constructor of this class requires these: 
+The constructor of this class requires the following arguments: 
 
 - `$httpClient` PSR-18 HTTP Client implementation.
 - `$requestFactory` PSR-17 HTTP Factory implementation.
