@@ -39,16 +39,16 @@ class TimestampModule implements
      * Create the timestamp signature.
      *
      * @param string|\SetaPDF_Core_Reader_FilePath $data
-     * @return \SetaPDF_Signer_Asn1_Element
+     * @return string
      * @throws Exception
      * @throws ClientExceptionInterface
      * @throws \SetaPDF_Signer_Asn1_Exception
      */
-    public function createTimestamp($data): \SetaPDF_Signer_Asn1_Element
+    public function createTimestamp($data): string
     {
         $timestamp = $this->client->timestamp($this->getHash($data));
 
-        return \SetaPDF_Signer_Asn1_Element::parse(base64_decode($timestamp));
+        return (string) \SetaPDF_Signer_Asn1_Element::parse(base64_decode($timestamp));
     }
 
     /**
