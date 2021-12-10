@@ -1,7 +1,7 @@
 <?php
 
 /**
- * @copyright Copyright (c) 2019 Setasign - Jan Slabon (https://www.setasign.com)
+ * @copyright Copyright (c) 2021 Setasign GmbH & Co. KG (https://www.setasign.com)
  * @license   http://opensource.org/licenses/mit-license The MIT License
  */
 
@@ -36,7 +36,7 @@ class Identity
      * @param string $signingCert
      * @param string $ocspResponse
      */
-    public function __construct($id, $signingCert, $ocspResponse)
+    public function __construct(string $id, string $signingCert, string $ocspResponse)
     {
         $this->id = $id;
         $this->signingCert = $signingCert;
