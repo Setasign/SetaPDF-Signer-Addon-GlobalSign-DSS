@@ -9,8 +9,7 @@ use setasign\SetaPDF\Signer\Module\GlobalSign\Dss\TimestampModule;
 class TimestampModuleTest extends TestHelper
 {
     /**
-     * @throws \GuzzleHttp\Exception\GuzzleException
-     * @throws \SetaPDF_Signer_Exception
+     * @throws \Throwable
      */
     public function testSimpleTimestamp()
     {
