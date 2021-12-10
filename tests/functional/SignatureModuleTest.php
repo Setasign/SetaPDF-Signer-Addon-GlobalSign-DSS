@@ -177,68 +177,15 @@ class SignatureModuleTest extends TestHelper
 
     protected function validate($path, $signatureFieldName, $certificate)
     {
-        list($tmpFile, $asn1) = $this->getSignatureDetails($path, $signatureFieldName);
+        $document = \SetaPDF_Core_Document::loadByFilename($path);
+        $result = \SetaPDF_Signer_ValidationRelatedInfo_IntegrityResult::create($document, $signatureFieldName);
 
-        $contentType = $asn1->getChild(0)->getValue();
-        $contentType = \SetaPDF_Signer_Asn1_Oid::decode($contentType);
-        $this->assertEquals('1.2.840.113549.1.7.2', $contentType);
+        $this->assertTrue($result->isValid());
 
-        /** @var \SetaPDF_Signer_Asn1_Element $content */
-        $content = $asn1->getChild(1);
-        $signedData = $content->getChild(0);
+        $certificate = new \SetaPDF_Signer_X509_Certificate($certificate);
+        $signingCertificate = $result->getSignedData()->getSigningCertificate();
 
-        $digestAlgorithms = $signedData->getChild(1);
-        $hashes = array();
-        foreach ($digestAlgorithms->getChildren() AS $algorithm) {
-            $algorithmOid = \SetaPDF_Signer_Asn1_Oid::decode($algorithm->getChild(0)->getValue());
-            $digest = \SetaPDF_Signer_Digest::getByOid($algorithmOid);
-            $hashes[$digest] = hash_file($digest, $tmpFile->getPath(), true);
-        }
-
-        // ensure that no eContent is used
-        $encapContentInfo = $signedData->getChild(2);
-        $this->assertEquals(1, $encapContentInfo->getChildCount());
-
-        $signerInfos = $signedData->getChild($signedData->getChildCount() - 1);
-        // only one SignerInfo
-        $this->assertEquals(1, $signerInfos->getChildCount());
-        $signerInfo = $signerInfos->getChild(0);
-        // get digest algo and check if it was defined in digestAlgorithms
-        $digestAlgorithmOid = \SetaPDF_Signer_Asn1_Oid::decode($signerInfo->getChild(2)->getChild(0)->getValue());
-        $digest = \SetaPDF_Signer_Digest::getByOid($digestAlgorithmOid);
-        $this->assertTrue(isset($hashes[$digest]));
-
-        // Check for signed attributes
-        if ($signerInfo->getChild(3)->getIdent() === "\xA0") { // [0] IMPLICIT
-            $_signedAttributes = $signerInfo->getChild(3)->getChildren();
-            $signedAttributes = array();
-            foreach ($_signedAttributes as $attribute) {
-                $attrType = $attribute->getChild(0)->getValue();
-                $attrTypeOid = \SetaPDF_Signer_Asn1_Oid::decode($attrType);
-                $signedAttributes[$attrTypeOid] = $attribute->getChild(1);
-            }
-
-            // check for mandatory attributes
-            $this->assertTrue(isset($signedAttributes['1.2.840.113549.1.9.3'])); // content-type
-            $this->assertTrue(isset($signedAttributes['1.2.840.113549.1.9.4'])); // message-digest
-
-            // hashes match?
-            $this->assertEquals($hashes[$digest], $signedAttributes['1.2.840.113549.1.9.4']->getChild(0)->getValue());
-
-            $data = $signerInfo->getChild(3)->__toString();
-            $data[0] = \SetaPDF_Signer_Asn1_Element::SET | \SetaPDF_Signer_Asn1_Element::IS_CONSTRUCTED;
-            $signatureValue = $signerInfo->getChild(5)->getValue();
-
-        } else {
-            $data = file_get_contents($tmpFile->getPath());
-            $signatureValue = $signerInfo->getChild(4)->getValue();
-        }
-
-        while (\openssl_error_string());
-
-        $pkey = \openssl_pkey_get_public($certificate);
-        $res = \openssl_verify($data, $signatureValue, $pkey, $digest);
-        $this->assertEquals(1, $res, openssl_error_string());
+        $this->assertEquals($certificate->getDigest(), $signingCertificate->getDigest());
 
         return true;
     }
