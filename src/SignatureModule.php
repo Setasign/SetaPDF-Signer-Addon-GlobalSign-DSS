@@ -40,6 +40,16 @@ class SignatureModule implements
     protected $addRevocationInfo = true;
 
     /**
+     * @var null|string[]
+     */
+    protected $trustchain;
+
+    /**
+     * @var null|string[]
+     */
+    protected $ocspResponses;
+
+    /**
      * The constructor.
      *
      * @param \SetaPDF_Signer $signer The main signer instance (used to disable the automatic change of the signature
@@ -81,6 +91,17 @@ class SignatureModule implements
         $this->addRevocationInfo = $addRevocationInfo;
     }
 
+    public function getTrustchain(): array
+    {
+        return $this->trustchain;
+    }
+
+    public function getOcspResponses(): array
+    {
+        return $this->ocspResponses;
+    }
+
+
     /**
      * Create a signature for the file in the given $tmpPath.
      *
@@ -94,13 +115,20 @@ class SignatureModule implements
     public function createSignature(\SetaPDF_Core_Reader_FilePath $tmpPath): string
     {
         $this->module->setCertificate($this->identity->getSigningCertificate());
-        $trustChain = $this->client->getTrustchain();
-        $this->module->setExtraCertificates($trustChain['trustchain']);
+        $trustchainResponse = $this->client->getTrustchain();
+        $this->trustchain = $trustchainResponse['trustchain'];
+        $this->module->setExtraCertificates($trustchainResponse['trustchain']);
+
+        $this->ocspResponses = [
+            \base64_decode($this->identity->getOcspResponse())
+        ];
+        foreach ($trustchainResponse['ocsp_revocation_info'] as $ocspRevocationInfo) {
+            $this->ocspResponses[] = \base64_decode($ocspRevocationInfo);
+        }
 
         if ($this->addRevocationInfo) {
-            $this->module->addOcspResponse(\base64_decode($this->identity->getOcspResponse()));
-            foreach ($trustChain['ocsp_revocation_info'] as $ocspRevocationInfo) {
-                $this->module->addOcspResponse(\base64_decode($ocspRevocationInfo));
+            foreach ($this->ocspResponses as $ocspResponse) {
+                $this->module->addOcspResponse($ocspResponse);
             }
         }
 
