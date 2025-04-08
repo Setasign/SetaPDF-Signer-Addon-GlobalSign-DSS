@@ -17,11 +17,15 @@ class SignatureModuleTest extends TestHelper
         $document = \SetaPDF_Core_Document::loadByFilename(__DIR__ . '/../_files/Laboratory-Report.pdf', $writer);
 
         $signer = new \SetaPDF_Signer($document);
-        $signer->setSignatureContentLength(14000);
+        $signer->setSignatureContentLength(25000);
         $field = $signer->getSignatureField();
 
         $client = $this->getClientInstance();
-        $identity = $client->getIdentity();
+        $identity = $client->getIdentity([
+            'subject_dn' => [
+                'common_name' => "Test"
+            ]
+        ]);
         $pades = new \SetaPDF_Signer_Signature_Module_Pades();
         $module = new SignatureModule($signer, $client, $identity, $pades);
 
@@ -43,7 +47,7 @@ class SignatureModuleTest extends TestHelper
         $document = \SetaPDF_Core_Document::loadByFilename(__DIR__ . '/../_files/Laboratory-Report.pdf', $writer);
 
         $signer = new \SetaPDF_Signer($document);
-        $signer->setSignatureContentLength(15000);
+        $signer->setSignatureContentLength(30000);
         $field = $signer->getSignatureField();
 
         $client = $this->getClientInstance();
@@ -51,13 +55,17 @@ class SignatureModuleTest extends TestHelper
         $module = new TimestampModule($client);
         $signer->setTimestampModule($module);
 
-        $identity = $client->getIdentity();
+        $identity = $client->getIdentity([
+            'subject_dn' => [
+                'common_name' => "Test"
+            ]
+        ]);
         $pades = new \SetaPDF_Signer_Signature_Module_Pades();
         $module = new SignatureModule($signer, $client, $identity, $pades);
 
         $signer->sign($module);
 
-//        copy($writer->getPath(), 'signed-and-timestamped.pdf');
+        copy($writer->getPath(), 'signed-and-timestamped.pdf');
 
         $this->assertTrue(
             $this->validate($writer->getPath(), $field->getQualifiedName(), $identity->getSigningCertificate())
@@ -73,10 +81,14 @@ class SignatureModuleTest extends TestHelper
         $document = \SetaPDF_Core_Document::loadByFilename(__DIR__ . '/../_files/Laboratory-Report.pdf', $writer);
 
         $signer = new \SetaPDF_Signer($document);
-        $signer->setSignatureContentLength(15000);
+        $signer->setSignatureContentLength(25000);
 
         $client = $this->getClientInstance();
-        $identity = $client->getIdentity();
+        $identity = $client->getIdentity([
+            'subject_dn' => [
+                'common_name' => "Test"
+            ]
+        ]);
 
         $pades = new \SetaPDF_Signer_Signature_Module_Pades();
         $module = new SignatureModule($signer, $client, $identity, $pades);
@@ -167,26 +179,23 @@ class SignatureModuleTest extends TestHelper
         $content = $v->offsetGet('Contents')->ensure()->getValue();
         $asn1 = \SetaPDF_Signer_Asn1_Element::parse($content);
 
-        return array(
+        return [
             $tmpFile,
             $asn1,
             $v,
             $document
-        );
+        ];
     }
 
     protected function validate($path, $signatureFieldName, $certificate)
     {
         $document = \SetaPDF_Core_Document::loadByFilename($path);
-        $result = \SetaPDF_Signer_ValidationRelatedInfo_IntegrityResult::create($document, $signatureFieldName);
 
-        $this->assertTrue($result->isValid());
+        $integrityResult = \SetaPDF_Signer_ValidationRelatedInfo_IntegrityResult::create($document, $signatureFieldName);
 
-        $certificate = new \SetaPDF_Signer_X509_Certificate($certificate);
-        $signingCertificate = $result->getSignedData()->getSigningCertificate();
+        $signingCert = $integrityResult->getSignedData()->getSigningCertificate();
 
-        $this->assertEquals($certificate->getDigest(), $signingCertificate->getDigest());
-
-        return true;
+        return $integrityResult->isValid() &&
+            (new \SetaPDF_Signer_X509_Certificate($certificate))->get() === $signingCert->get();
     }
 }

@@ -98,6 +98,7 @@ class ClientTest extends TestHelper
      */
     public function testGetQuotaWithInvalidType(Client $client)
     {
+        $this->expectExceptionMessage("Unknow quota type");
         $this->expectException(\InvalidArgumentException::class);
         $client->getQuota('anything');
     }
@@ -106,6 +107,7 @@ class ClientTest extends TestHelper
      * @param Client $client
      * @depends testForceLogin
      * @return Client
+     * @throws \GuzzleHttp\Exception\GuzzleException
      */
     public function testGetCountForSignatures(Client $client): Client
     {
@@ -143,6 +145,7 @@ class ClientTest extends TestHelper
      */
     public function testGetCountWithInvalidType(Client $client): void
     {
+        $this->expectExceptionMessage("Unknow counter type");
         $this->expectException(\InvalidArgumentException::class);
         $client->getCount('anything');
     }
@@ -180,11 +183,16 @@ class ClientTest extends TestHelper
     /**
      * @param Client $client
      * @return array
+     * @throws \GuzzleHttp\Exception\GuzzleException
      * @depends testForceLogin
      */
     public function testGetIdentityWithoutArguments(Client $client)
     {
-        $identity = $client->getIdentity();
+        $identity = $client->getIdentity([
+            'subject_dn' => [
+                'common_name' => "Test"
+            ]
+        ]);
         $this->assertInstanceOf(Identity::class, $identity);
         $this->assertNotEmpty($identity->getId());
         $this->assertNotEmpty($identity->getSigningCertificate());
@@ -230,16 +238,20 @@ class ClientTest extends TestHelper
 
     /**
      * @param Client $client
+     * @throws \GuzzleHttp\Exception\GuzzleException
      * @depends testForceLogin
      */
     public function testTimestamp(Client $client)
     {
-        $timestamp = $client->timestamp(\hash_file('sha256', __FILE__));
-        $this->assertSame(\strlen($timestamp), 2788);
+        $timestamp = base64_decode($client->timestamp(\hash_file('sha256', __FILE__)));
+
+        $ts = new \SetaPDF_Signer_Tsp_Token(\SetaPDF_Signer_Asn1_Element::parse($timestamp));
+        $this->assertTrue($ts->verify($ts->getSigningCertificate()));
     }
 
     /**
      * @param Client $client
+     * @throws \GuzzleHttp\Exception\GuzzleException
      * @depends testForceLogin
      */
     public function testGetTrustchain(Client $client)
