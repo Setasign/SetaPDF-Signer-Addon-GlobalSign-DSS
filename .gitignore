@@ -3,3 +3,4 @@
 /vendor/
 /private/
 /tests/functional/*.pdf
+/tests/*.pdf
