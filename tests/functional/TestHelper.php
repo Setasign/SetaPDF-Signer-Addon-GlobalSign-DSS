@@ -30,7 +30,6 @@ class TestHelper extends TestCase
             'cert' => $credentials['cert'],
             'ssl_key' => $credentials['privateKey']
         ]);
-        $httpClient = new \Mjelamanov\GuzzlePsr18\Client($httpClient);
 
         return new Client($httpClient, new RequestFactory(), new StreamFactory(), $apiKey, $apiSecret);
     }

@@ -4,11 +4,12 @@ namespace setasign\SetaPDF\Signer\Module\GlobalSign\Dss\tests\functional;
 
 use Http\Factory\Guzzle\RequestFactory;
 use Http\Factory\Guzzle\StreamFactory;
-use PHPUnit\Framework\Constraint\IsType;
 use Psr\Http\Client\ClientExceptionInterface;
 use setasign\SetaPDF\Signer\Module\GlobalSign\Dss\Client;
 use setasign\SetaPDF\Signer\Module\GlobalSign\Dss\Exception;
 use setasign\SetaPDF\Signer\Module\GlobalSign\Dss\Identity;
+use setasign\SetaPDF2\Signer\Asn1\Element as Asn1Element;
+use setasign\SetaPDF2\Signer\Tsp\Token as TspToken;
 
 class ClientTest extends TestHelper
 {
@@ -17,7 +18,6 @@ class ClientTest extends TestHelper
         $httpClient = new \GuzzleHttp\Client([
             'http_errors' => false,
         ]);
-        $httpClient = new \Mjelamanov\GuzzlePsr18\Client($httpClient);
 
         $module = new Client(
             $httpClient,
@@ -238,14 +238,17 @@ class ClientTest extends TestHelper
 
     /**
      * @param Client $client
-     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws ClientExceptionInterface
+     * @throws Exception
+     * @throws \setasign\SetaPDF2\Signer\Asn1\Exception
+     * @throws \setasign\SetaPDF2\Signer\Exception
      * @depends testForceLogin
      */
     public function testTimestamp(Client $client)
     {
-        $timestamp = base64_decode($client->timestamp(\hash_file('sha256', __FILE__)));
+        $timestamp = \base64_decode($client->timestamp(\hash_file('sha256', __FILE__)));
 
-        $ts = new \SetaPDF_Signer_Tsp_Token(\SetaPDF_Signer_Asn1_Element::parse($timestamp));
+        $ts = new TspToken(Asn1Element::parse($timestamp));
         $this->assertTrue($ts->verify($ts->getSigningCertificate()));
     }
 

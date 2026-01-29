@@ -1,7 +1,7 @@
 <?php
 
 /**
- * @copyright Copyright (c) 2021 Setasign GmbH & Co. KG (https://www.setasign.com)
+ * @copyright Copyright (c) 2026 Setasign GmbH & Co. KG (https://www.setasign.com)
  * @license   http://opensource.org/licenses/mit-license The MIT License
  */
 
@@ -10,14 +10,24 @@ declare(strict_types=1);
 namespace setasign\SetaPDF\Signer\Module\GlobalSign\Dss;
 
 use Psr\Http\Client\ClientExceptionInterface;
+use setasign\SetaPDF2\Core\Document;
+use setasign\SetaPDF2\Core\Reader\FilePath;
+use setasign\SetaPDF2\Core\Type\PdfDictionary;
+use setasign\SetaPDF2\Core\Type\PdfHexString;
+use setasign\SetaPDF2\Signer\Asn1\Exception;
+use setasign\SetaPDF2\Signer\Signature\Module\Cms;
+use setasign\SetaPDF2\Signer\Signature\Module\DictionaryInterface;
+use setasign\SetaPDF2\Signer\Signature\Module\DocumentInterface;
+use setasign\SetaPDF2\Signer\Signature\Module\ModuleInterface;
+use setasign\SetaPDF2\Signer\Signer;
 
 /**
  * The signature module for the SetaPDF-Signer component
  */
 class SignatureModule implements
-    \SetaPDF_Signer_Signature_Module_ModuleInterface,
-    \SetaPDF_Signer_Signature_DictionaryInterface,
-    \SetaPDF_Signer_Signature_DocumentInterface
+    ModuleInterface,
+    DictionaryInterface,
+    DocumentInterface
 {
     /**
      * @var Client
@@ -25,7 +35,7 @@ class SignatureModule implements
     protected $client;
 
     /**
-     * @var \SetaPDF_Signer_Signature_Module_Cms
+     * @var Cms
      */
     protected $module;
 
@@ -52,20 +62,20 @@ class SignatureModule implements
     /**
      * The constructor.
      *
-     * @param \SetaPDF_Signer $signer The main signer instance (used to disable the automatic change of the signature
+     * @param Signer $signer The main signer instance (used to disable the automatic change of the signature
      *                                length)
      * @param Client $client A REST client instance
      * @param Identity $identity The identity object
-     * @param \SetaPDF_Signer_Signature_Module_Cms $module An outer signature module instance which is used for CMS
-     *                                                     creation while the signature value is created and set by this
-     *                                                     class.
+     * @param Cms $module An outer signature module instance which is used for CMS
+     *                    creation while the signature value is created and set by this
+     *                    class.
      */
     public function __construct(
-        \SetaPDF_Signer $signer,
+        Signer $signer,
         Client $client,
         Identity $identity,
-        \SetaPDF_Signer_Signature_Module_Cms $module)
-    {
+        Cms $module
+    ) {
         $signer->setAllowSignatureContentLengthChange(false);
 
         $this->client = $client;
@@ -101,18 +111,16 @@ class SignatureModule implements
         return $this->ocspResponses;
     }
 
-
     /**
      * Create a signature for the file in the given $tmpPath.
      *
-     * @param \SetaPDF_Core_Reader_FilePath $tmpPath
+     * @param FilePath $tmpPath
      * @return string
-     * @throws Exception
      * @throws ClientExceptionInterface
-     * @throws \SetaPDF_Signer_Asn1_Exception
-     * @throws \SetaPDF_Signer_Exception
+     * @throws Exception
+     * @throws \setasign\SetaPDF2\Signer\Exception
      */
-    public function createSignature(\SetaPDF_Core_Reader_FilePath $tmpPath): string
+    public function createSignature(FilePath $tmpPath): string
     {
         $this->module->setCertificate($this->identity->getSigningCertificate());
         $trustchainResponse = $this->client->getTrustchain();
@@ -135,7 +143,7 @@ class SignatureModule implements
         $hash = \hash('sha256', $this->module->getDataToSign($tmpPath));
         $signature = $this->client->sign($this->identity, $hash);
 
-        $this->module->setSignatureValue(\SetaPDF_Core_Type_HexString::hex2str($signature));
+        $this->module->setSignatureValue(PdfHexString::hex2str($signature));
 
         return (string) $this->module->getCms();
     }
@@ -143,11 +151,11 @@ class SignatureModule implements
     /**
      * Method to update the signature dictionary.
      *
-     * @param \SetaPDF_Core_Type_Dictionary $dictionary
+     * @param PdfDictionary $dictionary
      */
-    public function updateSignatureDictionary(\SetaPDF_Core_Type_Dictionary $dictionary)
+    public function updateSignatureDictionary(PdfDictionary $dictionary)
     {
-        if ($this->module instanceof \SetaPDF_Signer_Signature_DictionaryInterface) {
+        if ($this->module instanceof DictionaryInterface) {
             $this->module->updateSignatureDictionary($dictionary);
         }
     }
@@ -155,11 +163,11 @@ class SignatureModule implements
     /**
      * Method to allow updates onto the document instance.
      *
-     * @param \SetaPDF_Core_Document $document
+     * @param Document $document
      */
-    public function updateDocument(\SetaPDF_Core_Document $document)
+    public function updateDocument(Document $document)
     {
-        if ($this->module instanceof \SetaPDF_Signer_Signature_DocumentInterface) {
+        if ($this->module instanceof DocumentInterface) {
             $this->module->updateDocument($document);
         }
     }

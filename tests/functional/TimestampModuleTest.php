@@ -2,9 +2,11 @@
 
 namespace setasign\SetaPDF\Signer\Module\GlobalSign\Dss\tests\functional;
 
-use PHPUnit\Framework\AssertionFailedError;
-use setasign\SetaPDF\Signer\Module\GlobalSign\Dss\SignatureModule;
 use setasign\SetaPDF\Signer\Module\GlobalSign\Dss\TimestampModule;
+use setasign\SetaPDF2\Core\Document;
+use setasign\SetaPDF2\Core\Writer\TempFileWriter;
+use setasign\SetaPDF2\Signer\SignatureField;
+use setasign\SetaPDF2\Signer\Signer;
 
 class TimestampModuleTest extends TestHelper
 {
@@ -13,10 +15,10 @@ class TimestampModuleTest extends TestHelper
      */
     public function testSimpleTimestamp()
     {
-        $writer = new \SetaPDF_Core_Writer_TempFile();
-        $document = \SetaPDF_Core_Document::loadByFilename(__DIR__ . '/../_files/Laboratory-Report.pdf', $writer);
+        $writer = new TempFileWriter();
+        $document = Document::loadByFilename(__DIR__ . '/../_files/Laboratory-Report.pdf', $writer);
 
-        $signer = new \SetaPDF_Signer($document);
+        $signer = new Signer($document);
         $signer->setSignatureContentLength(15000);
 
         $client = $this->getClientInstance();
@@ -28,10 +30,10 @@ class TimestampModuleTest extends TestHelper
 
 //        copy($writer->getPath(), 'timestamp-signature.pdf');
 
-        $document = \SetaPDF_Core_Document::loadByFilename($writer->getPath());
+        $document = Document::loadByFilename($writer->getPath());
 
-        $field = \SetaPDF_Signer_SignatureField::get($document, 'Signature', false);
-        $this->assertInstanceOf(\SetaPDF_Signer_SignatureField::class, $field);
+        $field = SignatureField::get($document, 'Signature', false);
+        $this->assertInstanceOf(SignatureField::class, $field);
 
         $value = $field->getValue();
         $this->assertSame('DocTimeStamp', $value->getValue('Type')->getValue());

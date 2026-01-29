@@ -5,6 +5,21 @@ namespace setasign\SetaPDF\Signer\Module\GlobalSign\Dss\tests\functional;
 use PHPUnit\Framework\AssertionFailedError;
 use setasign\SetaPDF\Signer\Module\GlobalSign\Dss\SignatureModule;
 use setasign\SetaPDF\Signer\Module\GlobalSign\Dss\TimestampModule;
+use setasign\SetaPDF2\Core\Document;
+use setasign\SetaPDF2\Core\Encoding\Encoding;
+use setasign\SetaPDF2\Core\Reader\FileReader;
+use setasign\SetaPDF2\Core\Type\Dictionary\DictionaryHelper;
+use setasign\SetaPDF2\Core\Type\PdfArray;
+use setasign\SetaPDF2\Core\Type\PdfDictionary;
+use setasign\SetaPDF2\Core\Type\PdfStream;
+use setasign\SetaPDF2\Core\Writer\TempFileWriter;
+use setasign\SetaPDF2\Signer\Asn1\Element as Asn1Element;
+use setasign\SetaPDF2\Signer\Signature\Appearance\Dynamic as DynamicAppearance;
+use setasign\SetaPDF2\Signer\Signature\Module\Pades;
+use setasign\SetaPDF2\Signer\SignatureField;
+use setasign\SetaPDF2\Signer\Signer;
+use setasign\SetaPDF2\Signer\ValidationRelatedInfo\IntegrityResult;
+use setasign\SetaPDF2\Signer\X509\Certificate;
 
 class SignatureModuleTest extends TestHelper
 {
@@ -13,10 +28,10 @@ class SignatureModuleTest extends TestHelper
      */
     public function testSimpleSignature()
     {
-        $writer = new \SetaPDF_Core_Writer_TempFile();
-        $document = \SetaPDF_Core_Document::loadByFilename(__DIR__ . '/../_files/Laboratory-Report.pdf', $writer);
+        $writer = new TempFileWriter();
+        $document = Document::loadByFilename(__DIR__ . '/../_files/Laboratory-Report.pdf', $writer);
 
-        $signer = new \SetaPDF_Signer($document);
+        $signer = new Signer($document);
         $signer->setSignatureContentLength(25000);
         $field = $signer->getSignatureField();
 
@@ -26,7 +41,7 @@ class SignatureModuleTest extends TestHelper
                 'common_name' => "Test"
             ]
         ]);
-        $pades = new \SetaPDF_Signer_Signature_Module_Pades();
+        $pades = new Pades();
         $module = new SignatureModule($signer, $client, $identity, $pades);
 
         $signer->sign($module);
@@ -43,10 +58,10 @@ class SignatureModuleTest extends TestHelper
      */
     public function testSignatureIncudingTimestamp()
     {
-        $writer = new \SetaPDF_Core_Writer_TempFile();
-        $document = \SetaPDF_Core_Document::loadByFilename(__DIR__ . '/../_files/Laboratory-Report.pdf', $writer);
+        $writer = new TempFileWriter();
+        $document = Document::loadByFilename(__DIR__ . '/../_files/Laboratory-Report.pdf', $writer);
 
-        $signer = new \SetaPDF_Signer($document);
+        $signer = new Signer($document);
         $signer->setSignatureContentLength(30000);
         $field = $signer->getSignatureField();
 
@@ -60,12 +75,12 @@ class SignatureModuleTest extends TestHelper
                 'common_name' => "Test"
             ]
         ]);
-        $pades = new \SetaPDF_Signer_Signature_Module_Pades();
+        $pades = new Pades();
         $module = new SignatureModule($signer, $client, $identity, $pades);
 
         $signer->sign($module);
 
-        copy($writer->getPath(), 'signed-and-timestamped.pdf');
+//        \copy($writer->getPath(), 'signed-and-timestamped.pdf');
 
         $this->assertTrue(
             $this->validate($writer->getPath(), $field->getQualifiedName(), $identity->getSigningCertificate())
@@ -77,10 +92,10 @@ class SignatureModuleTest extends TestHelper
      */
     public function testVisibleSignature()
     {
-        $writer = new \SetaPDF_Core_Writer_TempFile();
-        $document = \SetaPDF_Core_Document::loadByFilename(__DIR__ . '/../_files/Laboratory-Report.pdf', $writer);
+        $writer = new TempFileWriter();
+        $document = Document::loadByFilename(__DIR__ . '/../_files/Laboratory-Report.pdf', $writer);
 
-        $signer = new \SetaPDF_Signer($document);
+        $signer = new Signer($document);
         $signer->setSignatureContentLength(25000);
 
         $client = $this->getClientInstance();
@@ -90,16 +105,16 @@ class SignatureModuleTest extends TestHelper
             ]
         ]);
 
-        $pades = new \SetaPDF_Signer_Signature_Module_Pades();
+        $pades = new Pades();
         $module = new SignatureModule($signer, $client, $identity, $pades);
 
-        $appearance = new \SetaPDF_Signer_Signature_Appearance_Dynamic($module);
+        $appearance = new DynamicAppearance($module);
         $signer->setAppearance($appearance);
 
         $field = $signer->addSignatureField(
             'Signature',
             1,
-            \SetaPDF_Signer_SignatureField::POSITION_LEFT_TOP,
+            SignatureField::POSITION_LEFT_TOP,
             ['x' => 10, 'y' => -10],
             150,
             60
@@ -114,88 +129,29 @@ class SignatureModuleTest extends TestHelper
             $this->validate($writer->getPath(), $field->getQualifiedName(), $identity->getSigningCertificate())
         );
 
-        $document = \SetaPDF_Core_Document::loadByFilename($writer->getPath());
+        $document = Document::loadByFilename($writer->getPath());
 
-        $field = \SetaPDF_Signer_SignatureField::get($document, 'Signature', false);
-        $this->assertInstanceOf(\SetaPDF_Signer_SignatureField::class, $field);
+        $field = SignatureField::get($document, 'Signature', false);
+        $this->assertInstanceOf(SignatureField::class, $field);
 
         $dict = $field->getDictionary();
-        /** @var \SetaPDF_Core_Type_Stream $n2 */
-        $n2 = $dict->getValue('AP')->getValue('N')->ensure()->getValue()->getValue('Resources')->getValue('XObject')
+        $n2 = PdfStream::ensureType(
+            $dict->getValue('AP')->getValue('N')->ensure()->getValue()->getValue('Resources')->getValue('XObject')
             ->getValue('FRM')->ensure()->getValue()->getValue('Resources')->getValue('XObject')->getValue('n2')
-            ->ensure();
+        );
 
-        $this->assertNotFalse(strpos($n2->getStream(), 'Digitally signed by'));
-    }
-
-    protected function getSignatureDetails($path, $signatureFieldName)
-    {
-        $signatureFieldName = \SetaPDF_Core_Encoding::convertPdfString($signatureFieldName);
-        $reader = new \SetaPDF_Core_Reader_File($path);
-        $document = \SetaPDF_Core_Document::load($reader);
-
-        $terminalFields = $document->getCatalog()->getAcroForm()->getTerminalFieldsObjects();
-
-        $found = false;
-        foreach ($terminalFields AS $fieldData) {
-            /** @var \SetaPDF_Core_Type_Dictionary $fieldData */
-            $fieldData = $fieldData->ensure();
-            $ft = \SetaPDF_Core_Type_Dictionary_Helper::resolveAttribute($fieldData, 'FT');
-            if (!$ft || $ft->getValue() !== 'Sig') {
-                continue;
-            }
-
-            $name = \SetaPDF_Core_Document_Catalog_AcroForm::resolveFieldName($fieldData);
-            $name = \SetaPDF_Core_Encoding::convertPdfString($name);
-
-            if ($name === $signatureFieldName) {
-                $found = true;
-                break;
-            }
-        }
-
-        if (!$found) {
-            throw new AssertionFailedError('No field with name "' . $signatureFieldName . '" found.');
-        }
-
-        $v = \SetaPDF_Core_Type_Dictionary_Helper::resolveAttribute($fieldData, 'V');
-        if (!$v || !$v->ensure() instanceof \SetaPDF_Core_Type_Dictionary) {
-            throw new AssertionFailedError('The field "' . $signatureFieldName . '" is not signed.');
-        }
-
-        /** @var \SetaPDF_Core_Type_Dictionary $v */
-        $v = $v->ensure();
-
-        $byteRange = $v->offsetGet('ByteRange')->ensure()->toPhp();
-
-        $tmpFile = new \SetaPDF_Core_Writer_TempFile();
-        $tmpFile->start();
-        $reader->reset($byteRange[0], $byteRange[1]);
-        $tmpFile->write($reader->readBytes($byteRange[1]));
-        $reader->reset($byteRange[2], $byteRange[3]);
-        $tmpFile->write($reader->readBytes($byteRange[3]));
-        $tmpFile->finish();
-
-        $content = $v->offsetGet('Contents')->ensure()->getValue();
-        $asn1 = \SetaPDF_Signer_Asn1_Element::parse($content);
-
-        return [
-            $tmpFile,
-            $asn1,
-            $v,
-            $document
-        ];
+        $this->assertNotFalse(\strpos($n2->getStream(), 'Digitally signed by'));
     }
 
     protected function validate($path, $signatureFieldName, $certificate)
     {
-        $document = \SetaPDF_Core_Document::loadByFilename($path);
+        $document = Document::loadByFilename($path);
 
-        $integrityResult = \SetaPDF_Signer_ValidationRelatedInfo_IntegrityResult::create($document, $signatureFieldName);
+        $integrityResult = IntegrityResult::create($document, $signatureFieldName);
 
         $signingCert = $integrityResult->getSignedData()->getSigningCertificate();
 
         return $integrityResult->isValid() &&
-            (new \SetaPDF_Signer_X509_Certificate($certificate))->get() === $signingCert->get();
+            (new Certificate($certificate))->get() === $signingCert->get();
     }
 }
