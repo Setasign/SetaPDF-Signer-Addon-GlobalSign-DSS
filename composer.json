@@ -10,7 +10,7 @@
         }
     ],
     "require": {
-        "php": ">=7.2 <=8.5.99999",
+        "php": ">=7.4 <=8.5.99999",
         "ext-json": "*",
         "psr/http-client": "^1.0",
         "psr/http-factory": "^1.0",
