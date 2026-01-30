@@ -10,16 +10,18 @@ declare(strict_types=1);
 namespace setasign\SetaPDF\Signer\Module\GlobalSign\Dss;
 
 use Psr\Http\Client\ClientExceptionInterface;
-use setasign\SetaPDF2\Core\Document;
 use setasign\SetaPDF2\Core\Reader\FilePath;
-use setasign\SetaPDF2\Core\Type\PdfDictionary;
 use setasign\SetaPDF2\Core\Type\PdfHexString;
 use setasign\SetaPDF2\Signer\Asn1\Exception;
-use setasign\SetaPDF2\Signer\Signature\Module\Cms;
+use setasign\SetaPDF2\Signer\Ocsp\Response as OcspResponse;
 use setasign\SetaPDF2\Signer\Signature\Module\DictionaryInterface;
 use setasign\SetaPDF2\Signer\Signature\Module\DocumentInterface;
 use setasign\SetaPDF2\Signer\Signature\Module\ModuleInterface;
+use setasign\SetaPDF2\Signer\Signature\Module\PadesProxyTrait;
 use setasign\SetaPDF2\Signer\Signer;
+use setasign\SetaPDF2\Signer\ValidationRelatedInfo\CertificateResult;
+use setasign\SetaPDF2\Signer\ValidationRelatedInfo\Result;
+use setasign\SetaPDF2\Signer\X509\Certificate;
 
 /**
  * The signature module for the SetaPDF-Signer component
@@ -29,35 +31,21 @@ class SignatureModule implements
     DictionaryInterface,
     DocumentInterface
 {
-    /**
-     * @var Client
-     */
-    protected $client;
+    use PadesProxyTrait;
+
+    protected Client $client;
+    protected Identity $identity;
+    protected bool $addRevocationInfo = true;
 
     /**
-     * @var Cms
+     * @var string[]
      */
-    protected $module;
+    protected array $trustchain = [];
 
     /**
-     * @var Identity
+     * @var string[]
      */
-    protected $identity;
-
-    /**
-     * @var bool
-     */
-    protected $addRevocationInfo = true;
-
-    /**
-     * @var null|string[]
-     */
-    protected $trustchain;
-
-    /**
-     * @var null|string[]
-     */
-    protected $ocspResponses;
+    protected array $ocspResponses = [];
 
     /**
      * The constructor.
@@ -66,21 +54,16 @@ class SignatureModule implements
      *                                length)
      * @param Client $client A REST client instance
      * @param Identity $identity The identity object
-     * @param Cms $module An outer signature module instance which is used for CMS
-     *                    creation while the signature value is created and set by this
-     *                    class.
      */
     public function __construct(
         Signer $signer,
         Client $client,
-        Identity $identity,
-        Cms $module
+        Identity $identity
     ) {
         $signer->setAllowSignatureContentLengthChange(false);
 
         $this->client = $client;
         $this->identity = $identity;
-        $this->module = $module;
     }
 
     /**
@@ -101,14 +84,53 @@ class SignatureModule implements
         $this->addRevocationInfo = $addRevocationInfo;
     }
 
+    /**
+     * @return string[]
+     */
     public function getTrustchain(): array
     {
         return $this->trustchain;
     }
 
+    /**
+     * @return string[]
+     */
     public function getOcspResponses(): array
     {
         return $this->ocspResponses;
+    }
+
+    /**
+     * Get a complete VRI result object for further passing to the Document Security Store.
+     *
+     * @return Result
+     * @throws Exception
+     * @throws \setasign\SetaPDF2\Signer\Exception
+     */
+    public function getVerificationRelatedInformation(): Result
+    {
+        $result = new Result();
+
+        $certificates = [$this->getCertificate()];
+        foreach ($this->getTrustchain() as $certificate) {
+            $certificates[] = $certificate;
+        }
+        $ocspResponses = $this->getOcspResponses();
+
+        foreach ($certificates as $no => $certificate) {
+            $certificate = new Certificate($certificate);
+            $ocspResponse = null;
+            if (isset($ocspResponses[$no])) {
+                $ocspResponse = new OcspResponse($ocspResponses[$no]);
+                foreach ($ocspResponse->getCertificates()->getAll() as $ocspCertificate) {
+                    $result->add(new CertificateResult($ocspCertificate));
+                }
+            }
+
+            $result->add(new CertificateResult($certificate, $ocspResponse));
+        }
+
+        return $result;
     }
 
     /**
@@ -122,10 +144,10 @@ class SignatureModule implements
      */
     public function createSignature(FilePath $tmpPath): string
     {
-        $this->module->setCertificate($this->identity->getSigningCertificate());
+        $this->setCertificate($this->identity->getSigningCertificate());
         $trustchainResponse = $this->client->getTrustchain();
         $this->trustchain = $trustchainResponse['trustchain'];
-        $this->module->setExtraCertificates($trustchainResponse['trustchain']);
+        $this->setExtraCertificates($trustchainResponse['trustchain']);
 
         $this->ocspResponses = [
             \base64_decode($this->identity->getOcspResponse())
@@ -136,39 +158,16 @@ class SignatureModule implements
 
         if ($this->addRevocationInfo) {
             foreach ($this->ocspResponses as $ocspResponse) {
-                $this->module->addOcspResponse($ocspResponse);
+                $this->addOcspResponse($ocspResponse);
             }
         }
 
-        $hash = \hash('sha256', $this->module->getDataToSign($tmpPath));
+        $padesModule = $this->_getPadesModule();
+        $hash = \hash('sha256', $padesModule->getDataToSign($tmpPath));
         $signature = $this->client->sign($this->identity, $hash);
 
-        $this->module->setSignatureValue(PdfHexString::hex2str($signature));
+        $padesModule->setSignatureValue(PdfHexString::hex2str($signature));
 
-        return (string) $this->module->getCms();
-    }
-
-    /**
-     * Method to update the signature dictionary.
-     *
-     * @param PdfDictionary $dictionary
-     */
-    public function updateSignatureDictionary(PdfDictionary $dictionary)
-    {
-        if ($this->module instanceof DictionaryInterface) {
-            $this->module->updateSignatureDictionary($dictionary);
-        }
-    }
-
-    /**
-     * Method to allow updates onto the document instance.
-     *
-     * @param Document $document
-     */
-    public function updateDocument(Document $document)
-    {
-        if ($this->module instanceof DocumentInterface) {
-            $this->module->updateDocument($document);
-        }
+        return (string) $this->getCms();
     }
 }

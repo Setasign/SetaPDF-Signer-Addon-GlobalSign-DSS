@@ -2,24 +2,22 @@
 
 namespace setasign\SetaPDF\Signer\Module\GlobalSign\Dss\tests\functional;
 
-use PHPUnit\Framework\AssertionFailedError;
 use setasign\SetaPDF\Signer\Module\GlobalSign\Dss\SignatureModule;
 use setasign\SetaPDF\Signer\Module\GlobalSign\Dss\TimestampModule;
 use setasign\SetaPDF2\Core\Document;
-use setasign\SetaPDF2\Core\Encoding\Encoding;
-use setasign\SetaPDF2\Core\Reader\FileReader;
-use setasign\SetaPDF2\Core\Type\Dictionary\DictionaryHelper;
-use setasign\SetaPDF2\Core\Type\PdfArray;
-use setasign\SetaPDF2\Core\Type\PdfDictionary;
 use setasign\SetaPDF2\Core\Type\PdfStream;
 use setasign\SetaPDF2\Core\Writer\TempFileWriter;
-use setasign\SetaPDF2\Signer\Asn1\Element as Asn1Element;
+use setasign\SetaPDF2\Signer\DocumentSecurityStore;
+use setasign\SetaPDF2\Signer\Ocsp\CertId;
+use setasign\SetaPDF2\Signer\Ocsp\Response;
+use setasign\SetaPDF2\Signer\Ocsp\SingleResponse;
 use setasign\SetaPDF2\Signer\Signature\Appearance\Dynamic as DynamicAppearance;
 use setasign\SetaPDF2\Signer\Signature\Module\Pades;
 use setasign\SetaPDF2\Signer\SignatureField;
 use setasign\SetaPDF2\Signer\Signer;
 use setasign\SetaPDF2\Signer\ValidationRelatedInfo\IntegrityResult;
 use setasign\SetaPDF2\Signer\X509\Certificate;
+use setasign\SetaPDF2\Signer\X509\Collection;
 
 class SignatureModuleTest extends TestHelper
 {
@@ -41,8 +39,8 @@ class SignatureModuleTest extends TestHelper
                 'common_name' => "Test"
             ]
         ]);
-        $pades = new Pades();
-        $module = new SignatureModule($signer, $client, $identity, $pades);
+
+        $module = new SignatureModule($signer, $client, $identity);
 
         $signer->sign($module);
 
@@ -75,8 +73,8 @@ class SignatureModuleTest extends TestHelper
                 'common_name' => "Test"
             ]
         ]);
-        $pades = new Pades();
-        $module = new SignatureModule($signer, $client, $identity, $pades);
+
+        $module = new SignatureModule($signer, $client, $identity);
 
         $signer->sign($module);
 
@@ -105,8 +103,7 @@ class SignatureModuleTest extends TestHelper
             ]
         ]);
 
-        $pades = new Pades();
-        $module = new SignatureModule($signer, $client, $identity, $pades);
+        $module = new SignatureModule($signer, $client, $identity);
 
         $appearance = new DynamicAppearance($module);
         $signer->setAppearance($appearance);
@@ -141,6 +138,111 @@ class SignatureModuleTest extends TestHelper
         );
 
         $this->assertNotFalse(\strpos($n2->getStream(), 'Digitally signed by'));
+    }
+
+    public function testGetVerificationRelatedInformation()
+    {
+        $writer = new TempFileWriter();
+        $document = Document::loadByFilename(__DIR__ . '/../_files/Laboratory-Report.pdf', $writer);
+
+        $signer = new Signer($document);
+        $signer->setSignatureContentLength(25000);
+        $field = $signer->getSignatureField();
+
+        $client = $this->getClientInstance();
+        $identity = $client->getIdentity([
+            'subject_dn' => [
+                'common_name' => "Test"
+            ]
+        ]);
+
+        $module = new SignatureModule($signer, $client, $identity);
+
+        $result = $module->getVerificationRelatedInformation();
+        $this->assertCount(1, $result->getCertificates());
+        $this->assertEmpty($result->getOcspResponses());
+        $this->assertEmpty($result->getCrls());
+
+        $signer->sign($module);
+
+        $result = $module->getVerificationRelatedInformation();
+        $this->assertCount(7, $result->getCertificates());
+        $this->assertCount(3, $result->getOcspResponses());
+        $this->assertCount(0, $result->getCrls());
+
+        $certificates = $result->getCertificates();
+        $certificatesCollection = new Collection($certificates);
+
+        // let's ensure that the Ocsp information match the certificates in the
+        // $result object.
+        foreach ($certificates as $certificate) {
+            $issuer = $certificate->getIssuer($certificatesCollection);
+            $certId = CertId::create($certificate, $issuer);
+
+            $certResult = $result->getValidationRelatedInfoByCertificate($certificate);
+            $ocsp = $certResult->getOcspResponse();
+
+            if ($ocsp instanceof Response) {
+                $this->assertInstanceOf(SingleResponse::class, $ocsp->getSingleResponse($certId));
+            }
+        }
+
+//        copy($writer->getPath(), 'signed.pdf');
+
+        $this->assertTrue(
+            $this->validate($writer->getPath(), $field->getQualifiedName(), $identity->getSigningCertificate())
+        );
+    }
+
+    public function testAddDssOnly()
+    {
+        $writer = new TempFileWriter();
+        $document = Document::loadByFilename(__DIR__ . '/../_files/Laboratory-Report.pdf', $writer);
+
+        $signer = new Signer($document);
+        $signer->setSignatureContentLength(15000);
+        $field = $signer->getSignatureField();
+
+        $client = $this->getClientInstance();
+        $identity = $client->getIdentity([
+            'subject_dn' => [
+                'common_name' => "Test"
+            ]
+        ]);
+
+        $module = new SignatureModule($signer, $client, $identity);
+        $module->setAddRevocationInfo(false);
+
+        $signer->sign($module);
+
+        $vri = $module->getVerificationRelatedInformation();
+
+        $writer2 = new TempFileWriter();
+        $document = Document::loadByFilename($writer->getPath(), $writer2);
+
+        $dss = new DocumentSecurityStore($document);
+
+        $crls = $vri->getCrls();
+        $this->assertCount(0, $crls);
+        $ocsps = $vri->getOcspResponses();
+        $this->assertCount(3, $ocsps);
+        $certs = $vri->getCertificates();
+        $this->assertCount(7, $certs); // chain (3) + signing (1) + ocsp responders (3)
+
+        $dss->addValidationRelatedInfoByFieldName(
+            $field->getQualifiedName(),
+            $crls,
+            $ocsps,
+            $certs
+        );
+
+        $integrityResult = IntegrityResult::create($document, $field->getQualifiedName());
+        $this->assertCount(4, $integrityResult->getSignedData()->getCertificates());
+        $this->assertFalse($integrityResult->getSignedData()->getSignedAttribute('1.2.840.113583.1.1.8'));
+
+        $document->save()->finish();
+
+//        copy($writer2->getPath(), 'signed-ltv.pdf');
     }
 
     protected function validate($path, $signatureFieldName, $certificate)
