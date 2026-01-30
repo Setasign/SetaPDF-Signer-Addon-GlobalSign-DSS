@@ -14,20 +14,9 @@ namespace setasign\SetaPDF\Signer\Module\GlobalSign\Dss;
  */
 class Identity
 {
-    /**
-     * @var string
-     */
-    protected $id;
-
-    /**
-     * @var string
-     */
-    protected $signingCert;
-
-    /**
-     * @var string
-     */
-    protected $ocspResponse;
+    protected string $id;
+    protected string $signingCert;
+    protected string $ocspResponse;
 
     /**
      * Identity constructor.

@@ -29,37 +29,22 @@ class Client
     /**
      * @var ClientInterface PSR-18 HTTP Client implementation.
      */
-    protected $httpClient;
+    protected ClientInterface $httpClient;
 
     /**
      * @var RequestFactoryInterface PSR-17 HTTP Factory implementation.
      */
-    protected $requestFactory;
+    protected RequestFactoryInterface $requestFactory;
 
     /**
      * @var StreamFactoryInterface PSR-17 HTTP Factory implementation.
      */
-    protected $streamFactory;
+    protected StreamFactoryInterface $streamFactory;
 
-    /**
-     * @var string
-     */
-    protected $apiKey;
-
-    /**
-     * @var string
-     */
-    protected $apiSecret;
-
-    /**
-     * @var string
-     */
-    protected $endPoint;
-
-    /**
-     * @var string
-     */
-    protected $accessToken;
+    protected string $apiKey;
+    protected string $apiSecret;
+    protected string $endPoint;
+    protected ?string $accessToken = null;
 
     /**
      * Client constructor.
@@ -84,7 +69,7 @@ class Client
         $this->streamFactory = $streamFactory;
         $this->apiKey = $apiKey;
         $this->apiSecret = $apiSecret;
-        $this->endPoint = rtrim($endpoint, '/');
+        $this->endPoint = \rtrim($endpoint, '/');
     }
 
     /**
@@ -161,7 +146,7 @@ class Client
     public function getQuota(string $type): int
     {
         if (!\in_array($type, [self::TYPE_SIGNATURES, self::TYPE_TIMESTAMPS], true)) {
-            throw new \InvalidArgumentException(sprintf('Unknow quota type: "%s".', $type));
+            throw new \InvalidArgumentException(\sprintf('Unknow quota type: "%s".', $type));
         }
 
         $request = (
@@ -188,7 +173,7 @@ class Client
     public function getCount(string $type): int
     {
         if (!\in_array($type, [self::TYPE_SIGNATURES, self::TYPE_TIMESTAMPS, self::TYPE_IDENTITIES], true)) {
-            throw new \InvalidArgumentException(sprintf('Unknow counter type: "%s".', $type));
+            throw new \InvalidArgumentException(\sprintf('Unknow counter type: "%s".', $type));
         }
 
         $request = (
