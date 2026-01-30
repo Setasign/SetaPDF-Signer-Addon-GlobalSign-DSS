@@ -14,7 +14,7 @@ To use this package you need credentials for the GlobalSign Digital Signing Serv
 
 See "GlobalSign-Digital-Signing-Service-Guide 1.3.pdf" (or newer) for details. Ask a GlobalSign contact for this document. 
 
-This package is developed and tested on PHP >= 7.2 up to PHP 8.5. Requirements of the [SetaPDF-Signer](https://www.setasign.com/signer) 
+This package is developed and tested on PHP >= 7.4 up to PHP 8.5. Requirements of the [SetaPDF-Signer](https://www.setasign.com/signer) 
 component can be found [here](https://manuals.setasign.com/setapdf-signer-manual/getting-started/#index-1).
 
 We're using [PSR-17 (HTTP Factories)](https://www.php-fig.org/psr/psr-17/) and
@@ -34,7 +34,7 @@ Add following to your composer.json:
 ```json
 {
     "require": {
-        "setasign/seta-pdf-signer-addon-global-sign-dss": "^2.0"
+        "setasign/seta-pdf-signer-addon-global-sign-dss": "^3.0"
     },
     "repositories": [
         {
@@ -113,12 +113,12 @@ $signature = $client->sign($identity, hash('sha256', $data));
 ### The `SignatureModule` class
 
 This is the main signature module which can be used with the [SetaPDF-Signer](https://www.setasign.com/signer) component.
+The module creates PAdES conforming CMS containers.
 Its constructor requires these arguments:
 
 - `$signer` is the instance of the `setasign\SetaPDF2\Signer\Signer` class to which the module is passed afterwards. Internally [`$signer->setAllowSignatureContentLengthChange(false)`](https://manuals.setasign.com/api-reference/setapdf/c/SetaPDF.Signer#method_setAllowSignatureContentLengthChange) is called to prohibit redundant signature requests.
 - `$client` needs to be the `Dss\Client` instance.
 - `$identity` a `Dss\Identity` instance.
-- `$module` needs to be a [CMS](https://manuals.setasign.com/api-reference/setapdf/c/SetaPDF.Signer.Signature.Module.Cms) or [PAdES](https://manuals.setasign.com/api-reference/setapdf/c/SetaPDF.Signer.Signature.Module.Pades) signature module instance. It is used internally to create the CMS container.
 
 A simple complete signature process would look like this:
 
