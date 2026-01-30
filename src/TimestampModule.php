@@ -21,15 +21,7 @@ use setasign\SetaPDF2\Signer\Timestamp\Module\ModuleInterface;
 class TimestampModule implements
     ModuleInterface
 {
-    /**
-     * @var Client
-     */
-    protected $client;
-
-    /**
-     * @var Identity
-     */
-    protected $identity;
+    protected Client $client;
 
     /**
      * @param Client $client
