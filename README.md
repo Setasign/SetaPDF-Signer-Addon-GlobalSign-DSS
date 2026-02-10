@@ -1,7 +1,7 @@
 # SetaPDF-Signer component modules for the GlobalSign Digital Signing Service.
 
 This package offers modules for the [SetaPDF-Signer](https://www.setasign.com/signer) component that allow you 
-to use the [Cloud-based Digital Signing Service](https://www.globalsign.com/en/digital-signatures/cloud/) by
+to use the [Cloud-based Digital Signing Service](https://www.globalsign.com/en/digital-signing-service) by
 [GlobalSign](https://www.globalsign.com) to **digital sign and timestamp PDF documents in pure PHP**.
 
 ## Requirements
